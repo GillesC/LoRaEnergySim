@@ -1,13 +1,18 @@
+from LoRaPacket import LoRaPacket
+
+
 class AirInterface:
     def __init__(self, base_station):
         self.base_Station = base_station
+        self.packages_in_air = list()
 
-    # frequencyCollision, conditions
-    #
-    #        |f1-f2| <= 120 kHz if f1 or f2 has bw 500
-    #        |f1-f2| <= 60 kHz if f1 or f2 has bw 250
-    #        |f1-f2| <= 30 kHz if f1 or f2 has bw 125
-    def frequency(p1, p2):
+    @staticmethod
+    def frequency_collision(p1: LoRaPacket, p2: LoRaPacket):
+        """frequencyCollision, conditions
+                |f1-f2| <= 120 kHz if f1 or f2 has bw 500
+                |f1-f2| <= 60 kHz if f1 or f2 has bw 250
+                |f1-f2| <= 30 kHz if f1 or f2 has bw 125
+        """
         if abs(p1.freq - p2.freq) <= 120 and (p1.bw == 500 or p2.freq == 500):
             print("frequency coll 500")
             return True
@@ -18,16 +23,17 @@ class AirInterface:
             if abs(p1.freq - p2.freq) <= 30:
                 print("frequency coll 125")
                 return True
-            # else:
+                # else:
         print("no frequency coll")
         return False
 
-    #
-    # sfCollision, conditions
-    #
-    #       sf1 == sf2
-    #
-    def sf(p1, p2):
+    @staticmethod
+    def sf_collision(p1: LoRaPacket, p2: LoRaPacket):
+        #
+        # sfCollision, conditions
+        #
+        #       sf1 == sf2
+        #
         if p1.sf == p2.sf:
             print("collision sf node {} and node {}".format(p1.nodeid, p2.nodeid))
             # p2 may have been lost too, will be marked by other checks
@@ -35,7 +41,8 @@ class AirInterface:
         print("no sf collision")
         return False
 
-    def power(p1, p2):
+    @staticmethod
+    def power_collision(p1: LoRaPacket, p2: LoRaPacket):
         power_threshold = 6  # dB
         print(
             "pwr: node {0.nodeid} {0.rssi:3.2f} dBm node {1.nodeid} {1.rssi:3.2f} dBm; diff {2:3.2f} dBm".format(p1, p2,
@@ -55,7 +62,8 @@ class AirInterface:
         # p2 was the weaker packet, return it as a casualty
         return (p2,)
 
-    def timing(p1, p2):
+    @staticmethod
+    def timing_collision(p1: LoRaPacket, p2: LoRaPacket):
         # assuming p1 is the freshly arrived packet and this is the last check
         # we've already determined that p1 is a weak packet, so the only
         # way we can win is by being late enough (only the first n - 5 preamble symbols overlap)
@@ -80,23 +88,20 @@ class AirInterface:
         print("saved by the preamble")
         return False
 
-    def collided(self, packet):
-        spackages_on_air = self.base_Station.packagesInAir
+    def collision(self, packet):
         print("CHECK node {} (sf:{} bw:{} freq:{:.6e}) others: {}".format(
             packet.node.id, packet.sf, packet.bw, packet.freq,
-            len(spackages_on_air)))
-        for other in spackages_on_air:
+            len(self.packages_in_air)))
+        for other in self.packages_in_air:
             if other.nodeid != packet.nodeid:
-                print
-                ">> node {} (sf:{} bw:{} freq:{:.6e})".format(
-                    other.nodeid, other.packet.sf, other.packet.bw, other.packet.freq)
+                print(">> node {} (sf:{} bw:{} freq:{:.6e})".format(
+                    other.nodeid, other.packet.sf, other.packet.bw, other.packet.freq))
                 # simple collision
-                if frequencyCollision(packet, other.packet) \
-                        and sfCollision(packet, other.packet):
-                    if full_collision:
-                        if timingCollision(packet, other.packet):
+                if AirInterface.frequency_collision(packet, other.packet) \
+                        and AirInterface.sf_collision(packet, other.packet):
+                        if AirInterface.timing_collision(packet, other.packet):
                             # check who collides in the power domain
-                            c = powerCollision(packet, other.packet)
+                            c = AirInterface.power_collision(packet, other.packet)
                             # mark all the collided packets
                             # either this one, the other one, or both
                             for p in c:
@@ -108,3 +113,9 @@ class AirInterface:
                         packet.collided = 1
                         other.packet.collided = 1  # other also got lost, if it wasn't lost already
                         col = 1
+
+    def packet_in_air(self, package):
+        self.packages_in_air.insert(package)
+
+    def packet_received(self, package):
+        self.packages_in_air.remove(package)
