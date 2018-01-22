@@ -13,14 +13,14 @@ class AirInterface:
                 |f1-f2| <= 60 kHz if f1 or f2 has bw 250
                 |f1-f2| <= 30 kHz if f1 or f2 has bw 125
         """
-        if abs(p1.freq - p2.freq) <= 120 and (p1.bw == 500 or p2.freq == 500):
+        if abs(p1.lora_param.freq - p2.lora_param.freq) <= 120 and (p1.lora_param.bw == 500 or p2.lora_param.freq == 500):
             print("frequency coll 500")
             return True
-        elif abs(p1.freq - p2.freq) <= 60 and (p1.bw == 250 or p2.freq == 250):
+        elif abs(p1.lora_param.freq - p2.lora_param.freq) <= 60 and (p1.lora_param.bw == 250 or p2.lora_param.freq == 250):
             print("frequency coll 250")
             return True
         else:
-            if abs(p1.freq - p2.freq) <= 30:
+            if abs(p1.lora_param.freq - p2.lora_param.freq) <= 30:
                 print("frequency coll 125")
                 return True
                 # else:
@@ -34,7 +34,7 @@ class AirInterface:
         #
         #       sf1 == sf2
         #
-        if p1.sf == p2.sf:
+        if p1.lora_param.sf == p2.lora_param.sf:
             print("collision sf node {} and node {}".format(p1.nodeid, p2.nodeid))
             # p2 may have been lost too, will be marked by other checks
             return True
