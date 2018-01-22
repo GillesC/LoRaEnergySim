@@ -1,3 +1,4 @@
+# Time parameters are expressed in ms
 
 class LoRaParameters:
     # Radio wakeup time from SLEEP mode
@@ -18,7 +19,7 @@ class LoRaParameters:
     RX_JOIN_WINDOW_2_DELAY = JOIN_ACCEPT_DELAY2 - RADIO_WAKEUP_TIME
 
     RX_1_ACK_AIR_TIME = [170]  # TODO
-    RX_2_ACK_AIR_TIME = 3 #
+    RX_2_ACK_AIR_TIME = 3  #
 
     RX_1_ACK_ENERGY_MJ = [6.4]  # TODO
     RX_2_ACK_ENERGY_MJ = 3  # TODO
@@ -44,13 +45,30 @@ class LoRaParameters:
     JOIN_RX_1_WINDOW_OPEN_TIME_MS = 26
     JOIN_RX_1_WINDOW_OPEN_ENERGY_MJ = 0.8
 
+
+    ADR_MARGIN_DB  = 10 #dB
+
     # CR: % 5..8 This is the error correction coding. Higher values mean more overhead.
+    # header_implicit_mode -> header is removed
     def __init__(self, freq, sf, bw, cr, crc_enabled, de_enabled, header_implicit_mode):
         self.freq = freq
         self.sf = sf
         self.bw = bw
         self.crc = crc_enabled
         self.cr = cr
+
+        if sf is 7:
+            self.dr = 5
+        elif sf is 8:
+            self.dr = 4
+        elif sf is 9:
+            self.dr = 3
+        elif sf is 10:
+            self.dr = 2
+        elif sf is 11:
+            self.dr = 1
+        elif sf is 12:
+            self.dr = 0
 
         if bw == 125 and sf in [11, 12]:
             # low data rate optimization mandated for BW125 with SF11 and SF12
@@ -62,4 +80,3 @@ class LoRaParameters:
             self.h = 1
         else:
             self.h = header_implicit_mode
-
