@@ -2,6 +2,7 @@ from LoRaPacket import LoRaPacket
 
 
 class AirInterface:
+
     def __init__(self, base_station):
         self.base_Station = base_station
         self.packages_in_air = list()
