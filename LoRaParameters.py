@@ -68,7 +68,6 @@ class LoRaParameters:
         self.cr = cr
         self.tp = tp
 
-
         if sf == 7:
             self.dr = 5
         elif sf == 8:
@@ -93,8 +92,8 @@ class LoRaParameters:
         else:
             self.h = header_implicit_mode
 
-    def change_dr(self, dr):
-        tmp = self.dr + dr
+    def change_dr_to(self, dr: int):
+        tmp = dr
 
         if tmp > 5 or tmp < 0:
             raise ValueError('Out of bound DR changing from ' + str(self.dr) + ' to ' + str(tmp))
@@ -114,8 +113,8 @@ class LoRaParameters:
         elif self.dr == 0:
             self.sf = 12
 
-    def change_tp(self, tp):
-        tmp = self.tp + tp
+    def change_tp_to(self, tp: int):
+        tmp = tp
 
         if tmp > 14 or tmp < 2:
             raise ValueError('Out of bound TP changing from ' + str(self.tp) + ' to ' + str(tmp))

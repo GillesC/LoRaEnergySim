@@ -37,7 +37,7 @@ if __name__ == "__main__":
     axes.set_xlim([0, GlobalConfig.CELL_SIZE])
     axes.set_ylim([0, GlobalConfig.CELL_SIZE])
     plt.show()
-    env.run(until=1e9)
+    env.run(until=60e6)
 
     for node in nodes:
         node.plot_energy()

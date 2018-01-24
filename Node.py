@@ -62,9 +62,10 @@ class Node:
         self.sleep_time = sleep_time
 
     def plot_energy(self):
-        plt.plot(self.sleep_energy_time, self.sleep_energy_value, label='Sleep Energy (mJ)')
-        plt.plot(self.proc_energy_time, self.proc_energy_value, label='Processing Energy (mJ)')
-        plt.plot(self.tx_energy_time, self.tx_energy_value, label='Tx Energy (mJ)')
+        plt.semilogy(self.sleep_energy_time, self.sleep_energy_value, label='Sleep Energy (mJ)')
+        plt.semilogy(self.proc_energy_time, self.proc_energy_value, label='Processing Energy (mJ)')
+        plt.semilogy(self.tx_energy_time, self.tx_energy_value, label='Tx Energy (mJ)')
+        plt.title(self.node_id)
         # plt.plot(self.power_tracking_time, self.power_tracking_value, label='Power Tracking (mW)')
         plt.legend()
         plt.show()
@@ -88,7 +89,7 @@ class Node:
             energy = (now - start) * self.energy_profile.sleep_power
             print('{}: Waking up [time: {}; energy: {}]'.format(self.node_id, env.now, energy))
             self.sleep_energy_time.append(now)
-            self.sleep_energy_value.append(energy + self.sleep_prev_energy_value)
+            self.sleep_energy_value.append(energy)
             self.sleep_prev_energy_value += energy
 
             self.power_tracking_time.append(now)
@@ -103,7 +104,7 @@ class Node:
             now = self.env.now
             energy = (now - start) * self.energy_profile.sleep_power
             self.proc_energy_time.append(now)
-            self.proc_energy_value.append(energy + self.proc_prev_energy_value)
+            self.proc_energy_value.append(energy)
             self.proc_prev_energy_value += energy
             self.power_tracking_time.append(now)
             self.power_tracking_value.append(self.energy_profile.proc_power)
@@ -113,7 +114,7 @@ class Node:
             print('{}: SENDING packet'.format(self.node_id))
             packet = LoRaPacket(self, env.now, self.lora_param, self.payload_size)
             downlink_message = env.run(env.process(self.send(env, packet)))
-            # self.process_downlink_message(downlink_message)
+            self.process_downlink_message(downlink_message)
             print('{}: DONE sending'.format(self.node_id))
 
     # [----JOIN----]        [rx1]
@@ -126,7 +127,8 @@ class Node:
         energy = LoRaParameters.JOIN_TX_ENERGY_MJ
         self.tx_energy_time.append(self.env.now)
         self.tx_prev_energy_value += energy
-        self.tx_energy_value.append(self.tx_prev_energy_value)
+        #TODO check energy vs tx_prev_energy_value
+        self.tx_energy_value.append(energy)
 
         yield env.timeout(LoRaParameters.JOIN_ACCEPT_DELAY1)
         print('{}: \t JOIN WAIT'.format(self.node_id))
@@ -149,7 +151,8 @@ class Node:
         yield env.timeout(airtime + LoRaParameters.RADIO_PREP_TIME_MS)
         self.tx_energy_time.append(self.env.now)
         self.tx_prev_energy_value += energy
-        self.tx_energy_value.append(self.tx_prev_energy_value)
+        #TODO
+        self.tx_energy_value.append(energy)
 
         #      Received at BS      #
         print('{}: \t REC at BS'.format(self.node_id))
@@ -202,12 +205,14 @@ class Node:
         #     rx2_window_open = packet.rx2_window_open()
         #     yield env.timeout(rx2_window_open)
         #     self.rx_time = self.rx_time + rx2_window_open
-        # return packet.received
+        return downlink_message
 
     def process_downlink_message(self, downlink_message):
         # change dr based on downlink_message['dr']
-        print('Change DR ' + self.lora_param.dr + ' with ' + downlink_message['dr'])
-        self.lora_param.change_dr(downlink_message['dr'])
+        if 'dr' in downlink_message:
+            print('\t\t Change DR {} to {}'.format(self.lora_param.dr, downlink_message['dr']))
+            self.lora_param.change_dr_to(downlink_message['dr'])
         # change tp based on downlink_message['tp']
-        print('Change TP ' + self.lora_param.tp + ' with ' + downlink_message['tp'])
-        self.lora_param.change_tp(downlink_message['tp'])
+        if 'tp' in downlink_message:
+            print('\t\t Change TP {} to {}'.format(self.lora_param.tp, downlink_message['tp']))
+            self.lora_param.change_tp_to(downlink_message['tp'])

@@ -110,33 +110,31 @@ class Gateway:
             # this is done automatically by the node if ADRACKReq's get unacknowledged.
 
             current_tx_power = from_node.lora_param.tp
+            current_dr = from_node.lora_param.dr
             dr_changing = 0
-            change_tx_power = 0
+            new_tx_power = current_tx_power
+            new_dr =current_dr
 
             if num_steps > 0:
                 # increase data rate by the num_steps until DR5 is reached
                 num_steps_possible_dr = 5 - from_node.lora_param.dr
-                decrease_tx_power = 0
                 if num_steps > num_steps_possible_dr:
                     dr_changing = num_steps_possible_dr
                     num_steps_remaining = num_steps - num_steps_possible_dr
                     decrease_tx_power = num_steps_remaining * 3  # the remainder is used  to decrease the TXpower by
                     # 3dBm per step, until TXmin is reached. TXmin = 2 dBm for EU868.
-                    decrease_tx_power = np.amax(current_tx_power - decrease_tx_power, 2)
+                    new_tx_power = np.amax([current_tx_power - decrease_tx_power, 2])
                 elif num_steps <= num_steps_possible_dr:
                     dr_changing = num_steps
                     # use default decrease tx power (0)
-                change_tx_power = - decrease_tx_power
+                new_dr = current_dr + dr_changing
             elif num_steps < 0:
                 # TX power is increased by 3dBm per step, until TXmax is reached (=14 dBm for EU868).
                 num_steps = - num_steps  # invert so we do not need to work with negative numbers
-                new_tx_power = np.amin([current_tx_power + num_steps * 3, 14])
-                change_tx_power = new_tx_power - current_tx_power
-            print(str({'dr': dr_changing, 'tp': change_tx_power}))
-            if dr_changing != 0 or change_tx_power != 0:
-                print(str({'dr': dr_changing, 'tp': change_tx_power}))
+                new_tx_power = np.amin([current_tx_power + (num_steps * 3), 14])
+            print(str({'dr': new_dr, 'tp': new_tx_power}))
 
-            return {'dr': dr_changing, 'tp': change_tx_power}
+            return {'dr': new_dr, 'tp': new_tx_power}
         else:
             return None
 
