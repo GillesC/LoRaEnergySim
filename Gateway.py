@@ -3,7 +3,7 @@ from collections import deque  # circular buffer for storing SNR history for the
 import numpy as np
 
 import LoRaPacket
-from GlobalConfig import GlobalConfig
+from Global import Config
 from LoRaParameters import LoRaParameters
 import PropagationModel
 from Location import Location
@@ -11,7 +11,6 @@ from Location import Location
 
 class Gateway:
     SENSITIVITY = {6: -121, 7: -124, 8: -127, 9: -130, 10: -133, 11: -135, 12: -137}
-
 
     def __init__(self, env, location, snr_model, prop_model: PropagationModel.LogShadow):
         self.location = location
@@ -162,7 +161,7 @@ class Gateway:
                 # TX power is increased by 3dBm per step, until TXmax is reached (=14 dBm for EU868).
                 num_steps = - num_steps  # invert so we do not need to work with negative numbers
                 new_tx_power = np.amin([current_tx_power + (num_steps * 3), 14])
-            if GlobalConfig.PRINT_ENABLED:
+            if Config.PRINT_ENABLED:
                 print(str({'dr': new_dr, 'tp': new_tx_power}))
 
             return {'dr': new_dr, 'tp': new_tx_power}
@@ -173,7 +172,7 @@ class Gateway:
         print('\n\t\t GATEWAY')
         print('Received {} packets'.format(self.num_of_packet_received))
         print('Lost {} downlink packets'.format(len(self.downlink_packets_lost)))
-        if len(self.downlink_packets_lost) != 0:
+        if len(self.downlink_packets_lost) != 0 and self.num_of_packet_received != 0:
             lost_ratio = len(self.downlink_packets_lost) / self.num_of_packet_received
             print('Ratio Lost/Received is {0:.2f}%'.format(lost_ratio * 100))
 
@@ -181,7 +180,6 @@ class Gateway:
             time_on_ratio = self.channel_time_used[channel] / self.env.now
             print('CH{0} spent on air {1:.2f}%'.format(channel, time_on_ratio * 100))
 
-        if len(self.uplink_packet_weak) != 0:
+        if len(self.uplink_packet_weak) != 0 and self.num_of_packet_received != 0:
             weak_ratio = len(self.uplink_packet_weak) / self.num_of_packet_received
             print('Ratio Weak/Received is {0:.2f}%'.format(weak_ratio * 100))
-
