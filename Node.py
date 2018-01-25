@@ -22,6 +22,7 @@ class NodeState(Enum):
 class Node:
     def __init__(self, node_id, energy_profile, lora_parameters, sleep_time, process_time, adr, location,
                  base_station: Gateway, env, payload_size, air_interface):
+        self.adr = adr
         self.node_id = node_id
         self.energy_profile = energy_profile
         self.base_station = base_station
@@ -42,8 +43,8 @@ class Node:
         self.sleep_energy = 0
         self.rx_energy = 0
 
-        self.tx_energy_time = []
-        self.tx_energy_value = []
+        self.tx_power_time_mW = []
+        self.tx_power_value_mW = []
         self.tx_prev_energy_value = 0
 
         self.rx_energy_time = []
@@ -65,10 +66,14 @@ class Node:
 
         self.change_lora_param = dict()
 
+        self.tx_total_energy = 0
+        self.rx_total_energy = 0
+        self.sleep_total_energy = 0
+
     def plot_energy(self):
         plt.scatter(self.sleep_energy_time, self.sleep_energy_value, label='Sleep Power (mW)')
         plt.scatter(self.proc_energy_time, self.proc_energy_value, label='Processing Energy (mW)')
-        plt.scatter(self.tx_energy_time, self.tx_energy_value, label='Tx Energy (mW)')
+        plt.scatter(self.tx_power_time_mW, self.tx_power_value_mW, label='Tx Energy (mW)')
 
         for lora_param_setting in self.change_lora_param:
             plt.scatter(self.change_lora_param[lora_param_setting],
@@ -83,7 +88,7 @@ class Node:
         ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
 
         # Put a legend to the right of the current axis
-        #ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+        # ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
         plt.legend()
         # plt.plot(self.power_tracking_time, self.power_tracking_value, label='Power Tracking (mW)')
         plt.show()
@@ -117,6 +122,7 @@ class Node:
             self.sleep_energy_time.append(now)
             self.sleep_energy_value.append(energy / time)
             self.sleep_prev_energy_value += energy
+            self.sleep_total_energy += energy
 
             self.power_tracking_time.append(now)
             self.power_tracking_value.append(self.energy_profile.sleep_power)
@@ -167,22 +173,24 @@ class Node:
 
         self.tx_prev_energy_value += energy
         # TODO check energy vs tx_prev_energy_value
-        self.tx_energy_time.append(self.env.now)
-        self.tx_energy_value.append((energy / LoRaParameters.JOIN_TX_TIME_MS) / 1000)  # for mW
+        self.tx_power_time_mW.append(self.env.now)
+        self.tx_power_value_mW.append((energy / LoRaParameters.JOIN_TX_TIME_MS) / 1000)  # for mW
+        self.tx_total_energy += energy
 
     def join_wait(self):
         if GlobalConfig.PRINT_ENABLED:
             print('{}: \t JOIN WAIT'.format(self.node_id))
-        self.sleep_energy = LoRaParameters.JOIN_ACCEPT_DELAY1 * self.energy_profile.sleep_power
+        energy = LoRaParameters.JOIN_ACCEPT_DELAY1 * self.energy_profile.sleep_power
         self.sleep_energy_time.append(self.env.now)
         self.sleep_energy_value.append(self.energy_profile.sleep_power)
+        self.sleep_total_energy += energy
 
     def join_rx(self):
         if GlobalConfig.PRINT_ENABLED:
             print('{}: \t JOIN RX'.format(self.node_id))
         self.rx_energy_time.append(self.env.now)
-        self.rx_energy_value.append((LoRaParameters.JOIN_RX_ENERGY_MJ / LoRaParameters.JOIN_RX_TIME_MS) / 1000)  # for mW
-
+        self.rx_energy_value.append(
+            (LoRaParameters.JOIN_RX_ENERGY_MJ / LoRaParameters.JOIN_RX_TIME_MS) / 1000)  # for mW
 
     # [----transmit----]        [rx1]      [--rx2--]
     # computes time spent in different states during tx and rx one package
@@ -193,14 +201,16 @@ class Node:
         if GlobalConfig.PRINT_ENABLED:
             print('{}: \t TX'.format(self.node_id))
         # self.base_station.packet_in_air(packet)
-        airtime = packet.my_time_on_air()
-        energy = airtime * self.energy_profile.tx_power[packet.lora_param.tp] + LoRaParameters.RADIO_PREP_ENERGY_MJ
-        self.air_interface.packet_in_air(packet, env.now, airtime)
-        yield env.timeout(airtime + LoRaParameters.RADIO_PREP_TIME_MS)
-        self.tx_energy_time.append(self.env.now)
+        airtime_ms = packet.my_time_on_air()
+        energy = (airtime_ms * self.energy_profile.tx_power_mW[
+            packet.lora_param.tp]) / 1000 + LoRaParameters.RADIO_PREP_ENERGY_MJ
+        self.air_interface.packet_in_air(packet, env.now, airtime_ms)
+        yield env.timeout(airtime_ms + LoRaParameters.RADIO_PREP_TIME_MS)
+        self.tx_power_time_mW.append(self.env.now)
         self.tx_prev_energy_value += energy
         # TODO
-        self.tx_energy_value.append(energy / (airtime + LoRaParameters.RADIO_PREP_TIME_MS))
+        self.tx_power_value_mW.append(energy / (airtime_ms + LoRaParameters.RADIO_PREP_TIME_MS))
+        self.tx_total_energy += energy
 
         #      Received at BS      #
         if GlobalConfig.PRINT_ENABLED:
@@ -261,6 +271,10 @@ class Node:
         changed = False
         if downlink_message is not None:
             # change dr based on downlink_message['dr']
+
+            # if 'weak' in downlink_message:
+            # TODO ADR
+
             if 'dr' in downlink_message:
                 if int(self.lora_param.dr) != int(downlink_message['dr']):
                     if GlobalConfig.PRINT_ENABLED:
@@ -280,3 +294,13 @@ class Node:
                 if lora_param_str not in self.change_lora_param:
                     self.change_lora_param[lora_param_str] = []
                 self.change_lora_param[lora_param_str].append(self.env.now)
+
+    def log(self):
+        print('---------- LOG from Node {} ----------'.format(self.node_id))
+        print('\t Location {},{}'.format(self.location.x, self.location.y))
+        print('\t ADR {}'.format(self.adr))
+        print('\t Payload size {}'.format(self.payload_size))
+        print('\t Energy spend transmitting {0:.2f}'.format(self.tx_total_energy))
+        print('\t Energy spend receiving {0:.2f}'.format(np.sum(self.rx_energy_value)))
+        print('\t Energy spend sleeping {0:.2f}'.format(self.sleep_total_energy))
+        print('-------------------------------------')

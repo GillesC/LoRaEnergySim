@@ -6,6 +6,7 @@ import random
 class AirInterface:
 
     def __init__(self, base_station):
+        self.num_of_packets_send = 0
         self.base_Station = base_station
         self.packages_in_air = list()
         self.color_per_node = dict()
@@ -121,6 +122,7 @@ class AirInterface:
     color_values = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f']
 
     def packet_in_air(self, package: LoRaPacket, now, airtime):
+        self.num_of_packets_send += 1
         node_id = package.node.node_id
         if node_id not in self.color_per_node:
             self.color_per_node[node_id] = '#' + random.choice(AirInterface.color_values) + random.choice(
@@ -143,3 +145,6 @@ class AirInterface:
             node_id = package['node_id']
             plt.hlines(package['ch'], package['start'], package['stop'], color=self.color_per_node[node_id], linewidth=2.0)
         plt.show()
+
+    def log(self):
+        print('Total number of packets in the air {}'.format(self.num_of_packets_send))

@@ -39,7 +39,7 @@ class SNRModel:
         mean_mean_values = np.mean(mean_mean_values)
         print('Mean mean value:{} std value: {}'.format(mean_mean_values, mean_std_values))
         self.noise = mean_mean_values
-        self.std_noise = np.square(mean_std_values)
+        self.std_noise = mean_std_values
         # r = requests.get("https://dramco.be/api/lora/lora_packets.php")
         # rssi = {}
         # snr = {}

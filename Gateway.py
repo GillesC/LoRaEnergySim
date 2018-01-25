@@ -12,6 +12,7 @@ from Location import Location
 class Gateway:
     SENSITIVITY = {6: -121, 7: -124, 8: -127, 9: -130, 10: -133, 11: -135, 12: -137}
 
+
     def __init__(self, env, location, snr_model, prop_model: PropagationModel.LogShadow):
         self.location = location
         self.packet_history = dict()
@@ -19,6 +20,7 @@ class Gateway:
         for channel in LoRaParameters.CHANNELS:
             self.channel_time_used[channel] = 0
         self.downlink_packets_lost = []
+        self.uplink_packet_weak = []
         self.snr_model = snr_model
         self.prop_model = prop_model
         for freq in LoRaParameters.DEFAULT_CHANNELS:
@@ -28,7 +30,8 @@ class Gateway:
         self.env = env
 
     def packet_received(self, from_node, packet, now):
-        self.num_of_packet_received += 1
+
+        downlink_message = dict()
         """
         The packet is received at the gateway.
         The packet is no longer in the air and has not collided.
@@ -39,6 +42,14 @@ class Gateway:
         if from_node.node_id not in self.packet_history:
             self.packet_history[from_node.node_id] = deque(maxlen=20)
         rss = self.prop_model.tp_to_rss(packet.lora_param.tp, Location.distance(self.location, from_node.location))
+        if rss < self.SENSITIVITY[packet.lora_param.sf]:
+            # the packet received is to weak
+            downlink_message['weak_packet'] = True
+            self.uplink_packet_weak.append(packet)
+            return downlink_message
+
+        self.num_of_packet_received += 1
+
         snr = self.snr_model.rss_to_snr(rss)
         self.packet_history[from_node.node_id].append(snr)
         adr_settings = self.adr(from_node, packet)
@@ -49,7 +60,7 @@ class Gateway:
                                                               LoRaParameters.RX_2_DEFAULT_FREQ, now)
 
         tx_on_rx1 = False
-        downlink_message = dict()
+
         lost = False
 
         if packet.lora_param.dr > 3:
@@ -169,3 +180,8 @@ class Gateway:
         for channel in self.channel_time_used:
             time_on_ratio = self.channel_time_used[channel] / self.env.now
             print('CH{0} spent on air {1:.2f}%'.format(channel, time_on_ratio * 100))
+
+        if len(self.uplink_packet_weak) != 0:
+            weak_ratio = len(self.uplink_packet_weak) / self.num_of_packet_received
+            print('Ratio Weak/Received is {0:.2f}%'.format(weak_ratio * 100))
+

@@ -23,7 +23,7 @@ def plot_time(_env):
         yield _env.timeout(np.round(GlobalConfig.SIMULATION_TIME / 10))
 
 
-tx_power = {2: 91.8, 5: 95.9, 8: 101.6, 11: 120.8, 14: 146.5}  # measured TX power for each possible TP
+tx_power_mW = {2: 91.8, 5: 95.9, 8: 101.6, 11: 120.8, 14: 146.5}  # measured TX power for each possible TP
 middle = np.round(GlobalConfig.CELL_SIZE / 2)
 gateway_location = Location(x=middle, y=middle, indoor=True)
 plt.scatter(middle, middle, color='red')
@@ -35,7 +35,7 @@ for node_id in range(GlobalConfig.num_nodes):
     location = Location(min=0, max=GlobalConfig.CELL_SIZE, indoor=True)
     # TODO check if random location is more than 1m from gateway
     # node = Node(node_id, EnergyProfile())
-    energy_profile = EnergyProfile(5.7e-3, 15, tx_power)
+    energy_profile = EnergyProfile(5.7e-3, 15, tx_power_mW)
     lora_param = LoRaParameters(freq=np.random.choice(LoRaParameters.DEFAULT_CHANNELS),
                                 sf=np.random.choice(LoRaParameters.SPREADING_FACTORS),
                                 bw=125, cr=5, crc_enabled=1, de_enabled=0, header_implicit_mode=0, tp=14)
@@ -47,7 +47,6 @@ for node_id in range(GlobalConfig.num_nodes):
 axes = plt.gca()
 axes.set_xlim([0, GlobalConfig.CELL_SIZE])
 axes.set_ylim([0, GlobalConfig.CELL_SIZE])
-plt.ion()
 plt.show()
 env.process(plot_time(env))
 
@@ -55,8 +54,10 @@ d = datetime.timedelta(milliseconds=GlobalConfig.SIMULATION_TIME)
 print('Running simulator for {}.'.format(d))
 env.run(until=GlobalConfig.SIMULATION_TIME)
 
-# for node in nodes:
-#    node.plot_energy()
+for node in nodes:
+    node.log()
+    #node.plot_energy()
 
 gateway.log()
+air_interface.log()
 #air_interface.plot_packets_in_air()
