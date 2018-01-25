@@ -38,7 +38,7 @@ class LoRaParameters:
 
     DEFAULT_CHANNELS = [868100000, 868300000, 868500000]
     CHANNELS = [868100000, 868300000, 868500000, 868525000]
-    CHANNEL_DUTY_CYCLE = {868100000: 1, 868300000: 1, 868500000: 1, 868525000: 10}  # in procent
+    CHANNEL_DUTY_CYCLE_PROC = {868100000: 1, 868300000: 1, 868500000: 1, 868525000: 10}  # in procent
 
     JOIN_TX_TIME_MS = 160
     JOIN_TX_ENERGY_MJ = 9
@@ -120,3 +120,6 @@ class LoRaParameters:
             raise ValueError('Out of bound TP changing from ' + str(self.tp) + ' to ' + str(tmp))
 
         self.tp = tmp
+
+    def __str__(self):
+        return 'SF{}BW{}TP{}'.format(int(self.sf), int(self.bw), int(self.tp))

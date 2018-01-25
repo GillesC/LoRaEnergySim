@@ -20,10 +20,10 @@ def time_on_air(payload_size: int, lora_param: LoRaParameters):
 
 class LoRaPacket:
     def __init__(self, node, start_on_air, lora_param: LoRaParameters, payload_size, collided=False):
-        self.freq = np.random.choice(LoRaParameters.DEFAULT_CHANNELS)
         self.node = node
         self.start_on_air = start_on_air
         self.lora_param = lora_param
+        self.lora_param.freq = np.random.choice(LoRaParameters.DEFAULT_CHANNELS)
         self.payload_size = payload_size
         self.collided = collided
         self.received = False
