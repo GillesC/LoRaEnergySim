@@ -60,7 +60,7 @@ class Node:
         self.proc_prev_energy_value = 0
 
         self.power_tracking_time = []
-        self.power_tracking_value = []
+        self.power_tracking_value_mW = []
 
         self.sleep_time = sleep_time
 
@@ -71,15 +71,17 @@ class Node:
         self.sleep_total_energy = 0
 
     def plot_energy(self):
-        plt.scatter(self.sleep_energy_time, self.sleep_energy_value, label='Sleep Power (mW)')
-        plt.scatter(self.proc_energy_time, self.proc_energy_value, label='Processing Energy (mW)')
-        plt.scatter(self.tx_power_time_mW, self.tx_power_value_mW, label='Tx Energy (mW)')
+        # plt.scatter(self.sleep_energy_time, self.sleep_energy_value, label='Sleep Power (mW)')
+        # plt.scatter(self.proc_energy_time, self.proc_energy_value, label='Processing Energy (mW)')
+        # plt.scatter(self.tx_power_time_mW, self.tx_power_value_mW, label='Tx Energy (mW)')
 
-        for lora_param_setting in self.change_lora_param:
-            plt.scatter(self.change_lora_param[lora_param_setting],
-                        np.ones(len(self.change_lora_param[lora_param_setting])) * 140,
-                        label=lora_param_setting)  # 140 default
-            # value (top of figure)
+        plt.plot(self.power_tracking_time, self.power_tracking_value_mW, label='Power (mW)')
+
+        # for lora_param_setting in self.change_lora_param:
+        #    plt.scatter(self.change_lora_param[lora_param_setting],
+        #                np.ones(len(self.change_lora_param[lora_param_setting])) * 140,
+        #                label=lora_param_setting)  # 140 default
+        # value (top of figure)
 
         plt.title(self.node_id)
         ax = plt.gca()
@@ -112,7 +114,7 @@ class Node:
             start = self.env.now
 
             self.power_tracking_time.append(start)
-            self.power_tracking_value.append(self.energy_profile.sleep_power_mW)
+            self.power_tracking_value_mW.append(self.energy_profile.sleep_power_mW)
             yield self.env.timeout(self.sleep_time)
             now = self.env.now
 
@@ -125,15 +127,15 @@ class Node:
             self.sleep_prev_energy_value += energy
             self.sleep_total_energy += energy
 
-            self.power_tracking_time.append(now-1) # -1 to not overlap in time with next state
-            self.power_tracking_value.append(self.energy_profile.sleep_power_mW)
+            self.power_tracking_time.append(now - 1)  # -1 to not overlap in time with next state
+            self.power_tracking_value_mW.append(self.energy_profile.sleep_power_mW)
 
             # ------------PROCESSING------------ #
             if Config.PRINT_ENABLED:
                 print('{}: PROCESSING'.format(self.node_id))
             start = self.env.now
             self.power_tracking_time.append(start)
-            self.power_tracking_value.append(self.energy_profile.proc_power_mW)
+            self.power_tracking_value_mW.append(self.energy_profile.proc_power_mW)
             yield self.env.timeout(self.process_time)
             now = self.env.now
             time = (now - start)
@@ -141,8 +143,8 @@ class Node:
             self.proc_energy_time.append(now)
             self.proc_energy_value.append(energy / time)
             self.proc_prev_energy_value += energy
-            self.power_tracking_time.append(now-1)
-            self.power_tracking_value.append(self.energy_profile.proc_power_mW)
+            self.power_tracking_time.append(now - 1)
+            self.power_tracking_value_mW.append(self.energy_profile.proc_power_mW)
             if Config.PRINT_ENABLED:
                 print('{}: DONE PROCESSING [time: {}; energy: {}]'.format(self.node_id, env.now, energy))
 
@@ -199,8 +201,65 @@ class Node:
 
         #            TX             #
         # fixed energy overhead
+        yield env.process(self.send_tx(env, packet))
+
+        #      Received at BS      #
+        if Config.PRINT_ENABLED:
+            print('{}: \t REC at BS'.format(self.node_id))
+        downlink_message = self.base_station.packet_received(self, packet, env.now)
+
+        yield env.process(self.send_rx(env, packet, downlink_message))
+
+        return downlink_message
+
+    def process_downlink_message(self, downlink_message):
+        changed = False
+        if downlink_message is not None:
+            # change dr based on downlink_message['dr']
+
+            # if 'weak' in downlink_message:
+            # TODO ADR
+
+            if 'lost' in downlink_message:
+                if downlink_message['lost']:
+                    self.adr()
+
+            if 'dr' in downlink_message:
+                if int(self.lora_param.dr) != int(downlink_message['dr']):
+                    if Config.PRINT_ENABLED:
+                        print('\t\t Change DR {} to {}'.format(self.lora_param.dr, downlink_message['dr']))
+                    self.lora_param.change_dr_to(downlink_message['dr'])
+                    changed = True
+            # change tp based on downlink_message['tp']
+            if 'tp' in downlink_message:
+                if int(self.lora_param.tp) != int(downlink_message['tp']):
+                    if Config.PRINT_ENABLED:
+                        print('\t\t Change TP {} to {}'.format(self.lora_param.tp, downlink_message['tp']))
+                    self.lora_param.change_tp_to(downlink_message['tp'])
+                    changed = True
+
+            if changed:
+                lora_param_str = str(self.lora_param)
+                if lora_param_str not in self.change_lora_param:
+                    self.change_lora_param[lora_param_str] = []
+                self.change_lora_param[lora_param_str].append(self.env.now)
+
+    def log(self):
+        if Config.LOG_ENABLED:
+            print('---------- LOG from Node {} ----------'.format(self.node_id))
+            print('\t Location {},{}'.format(self.location.x, self.location.y))
+            print('\t LoRa Param {}'.format(self.lora_param))  # TODO make a list
+            print('\t ADR {}'.format(self.adr))
+            print('\t Payload size {}'.format(self.payload_size))
+            print('\t Energy spend transmitting {0:.2f}'.format(self.tx_total_energy))
+            print('\t Energy spend receiving {0:.2f}'.format(np.sum(self.rx_energy_value)))
+            print('\t Energy spend sleeping {0:.2f}'.format(self.sleep_total_energy))
+            print('-------------------------------------')
+
+    def send_tx(self, env, packet):
         if Config.PRINT_ENABLED:
             print('{}: \t TX'.format(self.node_id))
+
         # self.base_station.packet_in_air(packet)
         airtime_ms = packet.my_time_on_air()
         energy_mJ = (airtime_ms * self.energy_profile.tx_power_mW[
@@ -208,22 +267,30 @@ class Node:
         self.air_interface.packet_in_air(packet, env.now, airtime_ms)
 
         self.power_tracking_time.append(env.now)
-        self.power_tracking_value.append(self.energy_profile.tx_power_mW[
-            packet.lora_param.tp] + (LoRaParameters.RADIO_PREP_ENERGY_MJ/(LoRaParameters.RADIO_PREP_TIME_MS*1000)))
+        power_mW = self.energy_profile.tx_power_mW[
+                       packet.lora_param.tp] + (LoRaParameters.RADIO_PREP_ENERGY_MJ / (
+                LoRaParameters.RADIO_PREP_TIME_MS * 1000))
+        self.power_tracking_value_mW.append(power_mW)
+
         yield env.timeout(airtime_ms + LoRaParameters.RADIO_PREP_TIME_MS)
-        self.tx_power_time_mW.append(self.env.now)
-        self.tx_prev_energy_value += energy_mJ
-        # TODO
-        self.tx_power_value_mW.append(energy_mJ / (airtime_ms + LoRaParameters.RADIO_PREP_TIME_MS))
+
+        self.power_tracking_time.append(self.env.now - 1)
+        self.power_tracking_value_mW.append(power_mW)
         self.tx_total_energy += energy_mJ
 
-        #      Received at BS      #
-        if Config.PRINT_ENABLED:
-            print('{}: \t REC at BS'.format(self.node_id))
-        downlink_message = self.base_station.packet_received(self, packet, env.now)
-        # packet.strength = self.base_station.packetStrongEnough(packet)
-        # packet.collided = self.air_interface.collided(packet)
-        # packet.received = not packet.collided and packet.strength
+    def send_rx(self, env, packet, downlink_message):
+        # TODO
+        rx_on_rx1 = None
+        rx_on_rx2 = None
+        lost = None
+
+        if 'tx_on_rx1' in downlink_message:
+            rx_on_rx1 = downlink_message['tx_on_rx1']
+            rx_on_rx2 = not rx_on_rx1
+        if 'lost' in downlink_message:
+            lost = downlink_message['lost']
+            rx_on_rx1 = False
+            rx_on_rx2 = False
 
         #            RX1 wait             #
         if Config.PRINT_ENABLED:
@@ -270,44 +337,3 @@ class Node:
         #     rx2_window_open = packet.rx2_window_open()
         #     yield env.timeout(rx2_window_open)
         #     self.rx_time = self.rx_time + rx2_window_open
-        return downlink_message
-
-    def process_downlink_message(self, downlink_message):
-        changed = False
-        if downlink_message is not None:
-            # change dr based on downlink_message['dr']
-
-            # if 'weak' in downlink_message:
-            # TODO ADR
-
-            if 'dr' in downlink_message:
-                if int(self.lora_param.dr) != int(downlink_message['dr']):
-                    if Config.PRINT_ENABLED:
-                        print('\t\t Change DR {} to {}'.format(self.lora_param.dr, downlink_message['dr']))
-                    self.lora_param.change_dr_to(downlink_message['dr'])
-                    changed = True
-            # change tp based on downlink_message['tp']
-            if 'tp' in downlink_message:
-                if int(self.lora_param.tp) != int(downlink_message['tp']):
-                    if Config.PRINT_ENABLED:
-                        print('\t\t Change TP {} to {}'.format(self.lora_param.tp, downlink_message['tp']))
-                    self.lora_param.change_tp_to(downlink_message['tp'])
-                    changed = True
-
-            if changed:
-                lora_param_str = str(self.lora_param)
-                if lora_param_str not in self.change_lora_param:
-                    self.change_lora_param[lora_param_str] = []
-                self.change_lora_param[lora_param_str].append(self.env.now)
-
-    def log(self):
-        if Config.LOG_ENABLED:
-            print('---------- LOG from Node {} ----------'.format(self.node_id))
-            print('\t Location {},{}'.format(self.location.x, self.location.y))
-            print('\t LoRa Param {}'.format(self.lora_param))  # TODO make a list
-            print('\t ADR {}'.format(self.adr))
-            print('\t Payload size {}'.format(self.payload_size))
-            print('\t Energy spend transmitting {0:.2f}'.format(self.tx_total_energy))
-            print('\t Energy spend receiving {0:.2f}'.format(np.sum(self.rx_energy_value)))
-            print('\t Energy spend sleeping {0:.2f}'.format(self.sleep_total_energy))
-            print('-------------------------------------')

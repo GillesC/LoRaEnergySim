@@ -129,7 +129,7 @@ class SNRModel:
         #     # plt.show()
 
     def rss_to_snr(self, rss: float):
-        # TODO make a better noise assumption
+        # TODO make a better noise assumptionS
         return rss - self.noise - np.random.uniform(-self.std_noise, self.std_noise)
 
 def roundup(x, GRID_SIZE):

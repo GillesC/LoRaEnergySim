@@ -32,14 +32,18 @@ gateway = Gateway(env, gateway_location, SNRModel(), PropagationModel.LogShadow(
 nodes = []
 air_interface = AirInterface(gateway)
 for node_id in range(Config.num_nodes):
-    location = Location(min=0, max=Config.CELL_SIZE, indoor=True)
+    # location = Location(min=0, max=Config.CELL_SIZE, indoor=True)
+    location = Location(x=55, y=55, indoor=True)
     # TODO check if random location is more than 1m from gateway
     # node = Node(node_id, EnergyProfile())
     energy_profile = EnergyProfile(5.7e-3, 15, tx_power_mW)
+    # lora_param = LoRaParameters(freq=np.random.choice(LoRaParameters.DEFAULT_CHANNELS),
+    #                             sf=np.random.choice(LoRaParameters.SPREADING_FACTORS),
+    #                             bw=125, cr=5, crc_enabled=1, de_enabled=0, header_implicit_mode=0, tp=14)
     lora_param = LoRaParameters(freq=np.random.choice(LoRaParameters.DEFAULT_CHANNELS),
-                                sf=np.random.choice(LoRaParameters.SPREADING_FACTORS),
+                                sf=12,
                                 bw=125, cr=5, crc_enabled=1, de_enabled=0, header_implicit_mode=0, tp=14)
-    node = Node(node_id, energy_profile, lora_param, 1000*60*60, 20, True, location, gateway, env, 25, air_interface)
+    node = Node(node_id, energy_profile, lora_param, 1000*60, 20, True, location, gateway, env, 25, air_interface)
     nodes.append(node)
     env.process(node.run(env))
     plt.scatter(location.x, location.y, color='blue')
@@ -56,7 +60,7 @@ env.run(until=Config.SIMULATION_TIME)
 
 for node in nodes:
     node.log()
-    #node.plot_energy()
+    node.plot_energy()
 
 gateway.log()
 air_interface.log()

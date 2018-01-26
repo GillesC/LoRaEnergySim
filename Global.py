@@ -6,7 +6,7 @@ class Config:
     MAX_DELAY_BEFORE_SLEEP_MS = 500
     SIMULATION_TIME = 10*1000*60*60*24
     PRINT_ENABLED = False
-    CELL_SIZE = 1000
+    CELL_SIZE = 100
     MAX_DELAY_START_PER_NODE_MS = np.round(SIMULATION_TIME / 10)
-    num_nodes = 100
+    num_nodes = 1
     track_changes = True
