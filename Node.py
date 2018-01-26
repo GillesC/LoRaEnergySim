@@ -110,13 +110,14 @@ class Node:
             if Config.PRINT_ENABLED:
                 print('{}: START sleeping'.format(self.node_id))
             start = self.env.now
+
             self.power_tracking_time.append(start)
             self.power_tracking_value.append(self.energy_profile.sleep_power_mW)
             yield self.env.timeout(self.sleep_time)
             now = self.env.now
 
             time = (now - start)
-            energy = (time * self.energy_profile.sleep_power_mW)/1000
+            energy = (time * self.energy_profile.sleep_power_mW) / 1000
             if Config.PRINT_ENABLED:
                 print('{}: Waking up [time: {}; energy: {}]'.format(self.node_id, env.now, energy))
             self.sleep_energy_time.append(now)
@@ -124,7 +125,7 @@ class Node:
             self.sleep_prev_energy_value += energy
             self.sleep_total_energy += energy
 
-            self.power_tracking_time.append(now)
+            self.power_tracking_time.append(now-1) # -1 to not overlap in time with next state
             self.power_tracking_value.append(self.energy_profile.sleep_power_mW)
 
             # ------------PROCESSING------------ #
@@ -132,7 +133,7 @@ class Node:
                 print('{}: PROCESSING'.format(self.node_id))
             start = self.env.now
             self.power_tracking_time.append(start)
-            self.power_tracking_value.append(self.energy_profile.proc_power)
+            self.power_tracking_value.append(self.energy_profile.proc_power_mW)
             yield self.env.timeout(self.process_time)
             now = self.env.now
             time = (now - start)
@@ -140,8 +141,8 @@ class Node:
             self.proc_energy_time.append(now)
             self.proc_energy_value.append(energy / time)
             self.proc_prev_energy_value += energy
-            self.power_tracking_time.append(now)
-            self.power_tracking_value.append(self.energy_profile.proc_power)
+            self.power_tracking_time.append(now-1)
+            self.power_tracking_value.append(self.energy_profile.proc_power_mW)
             if Config.PRINT_ENABLED:
                 print('{}: DONE PROCESSING [time: {}; energy: {}]'.format(self.node_id, env.now, energy))
 
@@ -202,15 +203,19 @@ class Node:
             print('{}: \t TX'.format(self.node_id))
         # self.base_station.packet_in_air(packet)
         airtime_ms = packet.my_time_on_air()
-        energy = (airtime_ms * self.energy_profile.tx_power_mW[
+        energy_mJ = (airtime_ms * self.energy_profile.tx_power_mW[
             packet.lora_param.tp]) / 1000 + LoRaParameters.RADIO_PREP_ENERGY_MJ
         self.air_interface.packet_in_air(packet, env.now, airtime_ms)
+
+        self.power_tracking_time.append(env.now)
+        self.power_tracking_value.append(self.energy_profile.tx_power_mW[
+            packet.lora_param.tp] + (LoRaParameters.RADIO_PREP_ENERGY_MJ/(LoRaParameters.RADIO_PREP_TIME_MS*1000)))
         yield env.timeout(airtime_ms + LoRaParameters.RADIO_PREP_TIME_MS)
         self.tx_power_time_mW.append(self.env.now)
-        self.tx_prev_energy_value += energy
+        self.tx_prev_energy_value += energy_mJ
         # TODO
-        self.tx_power_value_mW.append(energy / (airtime_ms + LoRaParameters.RADIO_PREP_TIME_MS))
-        self.tx_total_energy += energy
+        self.tx_power_value_mW.append(energy_mJ / (airtime_ms + LoRaParameters.RADIO_PREP_TIME_MS))
+        self.tx_total_energy += energy_mJ
 
         #      Received at BS      #
         if Config.PRINT_ENABLED:
