@@ -127,7 +127,7 @@ class Node:
             self.sleep_prev_energy_value += energy
             self.sleep_total_energy += energy
 
-            self.power_tracking_time.append(now - 1)  # -1 to not overlap in time with next state
+            self.power_tracking_time.append(now - 0.0001)  # -0.0001 to not overlap in time with next state
             self.power_tracking_value_mW.append(self.energy_profile.sleep_power_mW)
 
             # ------------PROCESSING------------ #
@@ -143,7 +143,7 @@ class Node:
             self.proc_energy_time.append(now)
             self.proc_energy_value.append(energy / time)
             self.proc_prev_energy_value += energy
-            self.power_tracking_time.append(now - 1)
+            self.power_tracking_time.append(now - 0.0001)
             self.power_tracking_value_mW.append(self.energy_profile.proc_power_mW)
             if Config.PRINT_ENABLED:
                 print('{}: DONE PROCESSING [time: {}; energy: {}]'.format(self.node_id, env.now, energy))
@@ -274,7 +274,7 @@ class Node:
 
         yield env.timeout(airtime_ms + LoRaParameters.RADIO_PREP_TIME_MS)
 
-        self.power_tracking_time.append(self.env.now - 1)
+        self.power_tracking_time.append(self.env.now - 0.0001)
         self.power_tracking_value_mW.append(power_mW)
         self.tx_total_energy += energy_mJ
 
