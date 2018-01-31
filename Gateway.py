@@ -11,6 +11,7 @@ from Location import Location
 
 class Gateway:
     SENSITIVITY = {6: -121, 7: -124, 8: -127, 9: -130, 10: -133, 11: -135, 12: -137}
+    ADR_MARGIN_DB = 10  # dB
 
     def __init__(self, env, location, snr_model, prop_model: PropagationModel.LogShadow):
         self.location = location
@@ -28,6 +29,8 @@ class Gateway:
 
         self.env = env
 
+        self.prop_measurements = {}
+
     def packet_received(self, from_node, packet, now):
 
         downlink_message = dict()
@@ -40,62 +43,78 @@ class Gateway:
         """
         if from_node.node_id not in self.packet_history:
             self.packet_history[from_node.node_id] = deque(maxlen=20)
-        rss = self.prop_model.tp_to_rss(packet.lora_param.tp, Location.distance(self.location, from_node.location))
+
+        rss = self.prop_model.tp_to_rss(from_node.location.indoor, packet.lora_param.tp,
+                                        Location.distance(self.location, from_node.location))
+
+        if from_node.node_id not in self.prop_measurements:
+            self.prop_measurements[from_node.node_id] = {'rss': [], 'snr': [], 'time': []}
+
         if rss < self.SENSITIVITY[packet.lora_param.sf]:
             # the packet received is to weak
             downlink_message['weak_packet'] = True
+            downlink_message['lost'] = True
             self.uplink_packet_weak.append(packet)
             return downlink_message
 
         self.num_of_packet_received += 1
 
         snr = self.snr_model.rss_to_snr(rss)
+
+        self.prop_measurements[from_node.node_id]['time'].append(now)
+        self.prop_measurements[from_node.node_id]['rss'].append(rss)
+        self.prop_measurements[from_node.node_id]['snr'].append(snr)
+
         self.packet_history[from_node.node_id].append(snr)
         adr_settings = self.adr(from_node, packet)
 
-        # first compute if DC can be done for RX1 and RX2
-        possible_rx1, time_on_air_rx1 = self.check_duty_cycle(12, packet.lora_param.sf, packet.lora_param.freq, now)
-        possible_rx2, time_on_air_rx2 = self.check_duty_cycle(12, LoRaParameters.RX_2_DEFAULT_SF,
-                                                              LoRaParameters.RX_2_DEFAULT_FREQ, now)
+        if adr_settings is not None:
 
-        tx_on_rx1 = False
+            # first compute if DC can be done for RX1 and RX2
+            possible_rx1, time_on_air_rx1 = self.check_duty_cycle(12, packet.lora_param.sf, packet.lora_param.freq, now)
+            possible_rx2, time_on_air_rx2 = self.check_duty_cycle(12, LoRaParameters.RX_2_DEFAULT_SF,
+                                                                  LoRaParameters.RX_2_DEFAULT_FREQ, now)
 
-        lost = False
+            tx_on_rx1 = False
 
-        if packet.lora_param.dr > 3:
-            # we would like sending on the same channel with the same DR
-            if not possible_rx1:
-                if not possible_rx2:
-                    self.downlink_packets_lost.append(packet)
-                    lost = True
-                else:
-                    tx_on_rx1 = False
-            else:
-                tx_on_rx1 = True
-        else:
-            # we would like sending it on RX2 (less robust) but sending with 27dBm
-            if not possible_rx2:
+            lost = False
+
+            if packet.lora_param.dr > 3:
+                # we would like sending on the same channel with the same DR
                 if not possible_rx1:
-                    self.downlink_packets_lost.append(packet)
-                    lost = True
+                    if not possible_rx2:
+                        self.downlink_packets_lost.append(packet)
+                        lost = True
+                    else:
+                        tx_on_rx1 = False
                 else:
                     tx_on_rx1 = True
             else:
-                tx_on_rx1 = False
+                # we would like sending it on RX2 (less robust) but sending with 27dBm
+                if not possible_rx2:
+                    if not possible_rx1:
+                        self.downlink_packets_lost.append(packet)
+                        lost = True
+                    else:
+                        tx_on_rx1 = True
+                else:
+                    tx_on_rx1 = False
 
-        downlink_message['tx_on_rx1'] = tx_on_rx1
-        downlink_message['lost'] = lost
+            downlink_message['tx_on_rx1'] = tx_on_rx1
+            downlink_message['lost'] = lost
 
-        if not lost:
-            if tx_on_rx1:
-                self.channel_time_used[packet.lora_param.freq] += time_on_air_rx1
-            else:
-                self.channel_time_used[LoRaParameters.RX_2_DEFAULT_FREQ] += time_on_air_rx2
+            if not lost:
+                if tx_on_rx1:
+                    self.channel_time_used[packet.lora_param.freq] += time_on_air_rx1
+                else:
+                    self.channel_time_used[LoRaParameters.RX_2_DEFAULT_FREQ] += time_on_air_rx2
 
-        if adr_settings is not None:
-            downlink_message['dr'] = adr_settings['dr']
-            downlink_message['tp'] = adr_settings['tp']
-        return downlink_message
+            if adr_settings is not None:
+                downlink_message['dr'] = adr_settings['dr']
+                downlink_message['tp'] = adr_settings['tp']
+            return downlink_message
+        else:
+            return None
 
     def check_duty_cycle(self, payload_size, sf, freq, now):
         time_on_air = LoRaPacket.time_on_air(payload_size, lora_param=LoRaParameters(freq, sf, 125, 5, 1, 0, 1))
@@ -129,7 +148,7 @@ class Gateway:
             elif from_node.lora_param.sf == 12:
                 adr_required_snr = -20
 
-            snr_margin = max_snr - adr_required_snr - LoRaParameters.ADR_MARGIN_DB
+            snr_margin = max_snr - adr_required_snr - self.ADR_MARGIN_DB
 
             num_steps = np.round(snr_margin / 3)
             # If NStep > 0 the data rate can be increased and/or power reduced.
@@ -183,3 +202,6 @@ class Gateway:
         if len(self.uplink_packet_weak) != 0 and self.num_of_packet_received != 0:
             weak_ratio = len(self.uplink_packet_weak) / self.num_of_packet_received
             print('Ratio Weak/Received is {0:.2f}%'.format(weak_ratio * 100))
+
+    def get_prop_measurements(self, node_id):
+        return self.prop_measurements[node_id]

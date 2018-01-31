@@ -132,8 +132,7 @@ class SNRModel:
         # TODO make a better noise assumptionS
         return rss - self.noise - np.random.uniform(-self.std_noise, self.std_noise)
 
+
 def roundup(x, GRID_SIZE):
     x = np.divide(x, GRID_SIZE)
     return np.ceil(x).astype(int) * GRID_SIZE
-
-

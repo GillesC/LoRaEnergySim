@@ -13,7 +13,7 @@ def time_on_air(payload_size: int, lora_param: LoRaParameters):
     t_pream = (n_pream + 4.25) * t_sym
     payload_symb_n_b = 8 + max(math.ceil(
         (8.0 * payload_size - 4.0 * lora_param.sf + 28 + 16 * lora_param.crc - 20 * (1 - lora_param.h)) / (
-                4.0 * (lora_param.sf - 2 * lora_param.de))) * (lora_param.cr+4), 0)
+                4.0 * (lora_param.sf - 2 * lora_param.de))) * lora_param.cr, 0)
     t_payload = payload_symb_n_b * t_sym
     return t_pream + t_payload
 
@@ -47,6 +47,7 @@ class LoRaPacket:
         t_payload = payload_symb_n_b * t_sym
         self.time_on_air = t_pream + t_payload
         return self.time_on_air
+
 
 
 

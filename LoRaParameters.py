@@ -14,22 +14,19 @@ class LoRaParameters:
     JOIN_ACCEPT_DELAY2 = 6000
 
     RX_WINDOW_1_DELAY = RECEIVE_DELAY1 - RADIO_WAKEUP_TIME
-    RX_WINDOW_2_DELAY = JOIN_ACCEPT_DELAY2 - RADIO_WAKEUP_TIME
+    RX_WINDOW_2_DELAY = RECEIVE_DELAY2 - RADIO_WAKEUP_TIME
 
     RX_JOIN_WINDOW_1_DELAY = JOIN_ACCEPT_DELAY1 - RADIO_WAKEUP_TIME
     RX_JOIN_WINDOW_2_DELAY = JOIN_ACCEPT_DELAY2 - RADIO_WAKEUP_TIME
 
-    RX_1_ACK_AIR_TIME = [170]  # TODO
-    RX_2_ACK_AIR_TIME = 3  #
+    RX_1_NO_ACK_AIR_TIME = [170, 90, 47, 38, 21, 15]  # do not change order (index == DR)
+    RX_1_NO_ACK_ENERGY_MJ = [6.4, 3.3, 1.6, 1.3, 0.7, 0.5]  # do not change order (index == DR)
 
-    RX_1_ACK_ENERGY_MJ = [6.4]  # TODO
-    RX_2_ACK_ENERGY_MJ = 3  # TODO
+    RX_2_ACK_AIR_TIME = 160
+    RX_2_ACK_ENERGY_MJ = 5.6
 
-    RX_1_NO_ACK_AIR_TIME = [170]  # TODO
-    RX_2_NO_ACK_AIR_TIME = 2
-
-    RX_1_NO_ACK_ENERGY_MJ = [6.4]  # TODO
-    RX_2_NO_ACK_ENERGY_MJ = 0.0066  # TODO
+    RX_2_NO_ACK_AIR_TIME = 40
+    RX_2_NO_ACK_ENERGY_MJ = 1.3
 
     RX_2_DEFAULT_FREQ = 868525000
     RX_2_DEFAULT_SF = 9
@@ -53,10 +50,11 @@ class LoRaParameters:
     JOIN_RX_1_WINDOW_OPEN_TIME_MS = 26
     JOIN_RX_1_WINDOW_OPEN_ENERGY_MJ = 0.8
 
-    RADIO_PREP_ENERGY_MJ = 0.5  # fixed overhead with each transmission of 500 µJ
-    RADIO_PREP_TIME_MS = 40
+    RADIO_TX_PREP_ENERGY_MJ = 0.5  # fixed overhead with each transmission of 500 µJ
+    RADIO_TX_PREP_TIME_MS = 40
 
-    ADR_MARGIN_DB = 10  # dB
+    # Maximum payload with respect to the datarate index. Cannot operate with repeater.
+    MaxPayloadOfDatarate = [51, 51, 51, 115, 242, 242, 242, 242]
 
     # CR: % 5..8 This is the error correction coding. Higher values mean more overhead.
     # header_implicit_mode -> header is removed
@@ -113,6 +111,17 @@ class LoRaParameters:
         elif self.dr == 0:
             self.sf = 12
 
+        if self.bw == 125 and self.sf in [11, 12]:
+            # low data rate optimization mandated for BW125 with SF11 and SF12
+            self.de = 1
+        else:
+            self.de = 0
+        if self.sf == 6:
+            # can only have implicit header with SF6
+            self.h = 1
+        else:
+            self.h = 0
+
     def change_tp_to(self, tp: int):
         tmp = tp
 
@@ -123,3 +132,12 @@ class LoRaParameters:
 
     def __str__(self):
         return 'SF{}BW{}TP{}'.format(int(self.sf), int(self.bw), int(self.tp))
+
+    @property
+    def dr(self):
+        # to be sure to return an int
+        return int(self.__dr)
+
+    @dr.setter
+    def dr(self, dr):
+        self.__dr = dr
