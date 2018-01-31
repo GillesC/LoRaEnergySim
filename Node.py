@@ -174,11 +174,15 @@ class Node:
 
     def process_downlink_message(self, downlink_message):
         changed = False
-        if downlink_message is not None:
-            # change dr based on downlink_message['dr']
+        ack_received = False
 
-            # if 'weak' in downlink_message:
-            # TODO ADR
+        if downlink_message is None:
+            ack_received = False
+
+
+        #TODO first extract information, than process it
+
+        if downlink_message is not None:
 
             if 'lost' in downlink_message:
                 if downlink_message['lost']:
@@ -204,6 +208,8 @@ class Node:
                 if lora_param_str not in self.change_lora_param:
                     self.change_lora_param[lora_param_str] = []
                 self.change_lora_param[lora_param_str].append(self.env.now)
+
+
 
 
     def log(self):
