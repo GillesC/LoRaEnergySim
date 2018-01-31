@@ -183,7 +183,7 @@ class Node:
             if 'lost' in downlink_message:
                 if downlink_message['lost']:
                     self.lost_packages_time.append(self.env.now)
-                    self.node_adr()
+                    self.message_lost()
 
             if 'dr' in downlink_message:
                 if int(self.lora_param.dr) != int(downlink_message['dr']):
@@ -205,8 +205,6 @@ class Node:
                     self.change_lora_param[lora_param_str] = []
                 self.change_lora_param[lora_param_str].append(self.env.now)
 
-    def node_adr(self):
-        pass
 
     def log(self):
         if Config.LOG_ENABLED:
@@ -383,3 +381,7 @@ class Node:
 
     def track_energy(self, state: str, energy_consumed_mJ: float):
         self.energy_tracking[state] += energy_consumed_mJ
+
+    def message_lost(self):
+        pass #TODO
+
