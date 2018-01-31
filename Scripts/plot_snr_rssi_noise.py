@@ -27,7 +27,7 @@ i = 1
 
 num_of_devices = 0
 for device_id, packets in packet_per_dev.items():
-    if len(packets) > 10000:
+    if "sf" in device_id:
         num_of_devices += 1
 
 plt.figure(1)
@@ -40,7 +40,7 @@ for device_id, packets in packet_per_dev.items():
 
     # only show devices with more than 10 packets
 
-    if len(packets) > 10000:
+    if "sf" in device_id:
         for p in packets:
             time = datetime.strptime(p['time_server'], '%Y-%m-%d %H:%M:%S')
             t.append(time)

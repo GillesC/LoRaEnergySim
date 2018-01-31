@@ -1,45 +1,38 @@
-import datetime
+from datetime import datetime
 
-import requests
 import matplotlib.dates as md
 import matplotlib.pyplot as plt
+import pandas as pd
+import requests
 
-
-#TODO
-
-print('request GET')
 r = requests.get("https://dramco.be/api/lora/lora_packets.php")
+rss = []
+snr = []
+t = []
 
-noise_per_dev = {}
-
-print('processing packets')
-packets = r.json()
-for packet in packets:
-    dev_id = packet['dev_id']
-    if dev_id not in noise_per_dev:
-        noise_per_dev[dev_id] = []
-    noise_per_dev[dev_id].append(float(packet['rssi']) - float(packet['snr']))
-
-
-xfmt = md.DateFormatter('%Y-%m-%d %H:%M:%S')
-for device_id, packets in packet_per_dev.items():
-    t = []
-    rssi = []
-    snr = []
-    noise = []
-
-    ax = plt.gca()
-
-    for p in packets:
-        time = datetime.strptime(p['time_server'], '%Y-%m-%d %H:%M:%S')
+for packet in r.json():
+    if packet['dev_id'] == 'sf9-bw125-2dbm-2':
+        rss.append(packet['rssi'])
+        snr.append(packet['snr'])
+        time = datetime.strptime(packet['time_server'], '%Y-%m-%d %H:%M:%S')
         t.append(time)
-        rssi.append(float(p['rssi']))
-        snr.append(float(p['snr']))
-        noise.append(float(p['rssi']) - float(p['snr']))
-    t = md.date2num(t)
-    plt.plot(t, rssi, label='RSSI [dBm]')
-    plt.plot(t, snr, label='SNR [dB]')
-    plt.plot(t, noise, label='Noise [dBm]')
-    plt.legend()
-    plt.title(device_id)
-    plt.show()
+
+serie_rss = pd.Series(rss, t)
+serie_snr = pd.Series(snr, t)
+
+plt.figure(1)
+
+plt.subplot(4, 1, 1)
+plt.plot(t, snr, label='SNR')
+plt.legend()
+plt.subplot(4, 1, 2)
+plt.plot(t, rss, label='RSS')
+plt.legend()
+plt.subplot(4, 1, 3)
+plt.plot(serie_snr.rolling(window=240).mean(), label='SNR')
+plt.legend()
+plt.subplot(4, 1, 4)
+plt.plot(serie_rss.rolling(window=240).mean(), label='RSS')
+
+plt.legend()
+plt.show()
