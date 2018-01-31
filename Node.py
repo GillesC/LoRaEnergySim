@@ -222,7 +222,7 @@ class Node:
 
             if 'lost' in downlink_message:
                 if downlink_message['lost']:
-                    self.adr()
+                    self.message_lost()
 
             if 'dr' in downlink_message:
                 if int(self.lora_param.dr) != int(downlink_message['dr']):
@@ -337,3 +337,6 @@ class Node:
         #     rx2_window_open = packet.rx2_window_open()
         #     yield env.timeout(rx2_window_open)
         #     self.rx_time = self.rx_time + rx2_window_open
+
+    def message_lost(self):
+        pass #TODO
