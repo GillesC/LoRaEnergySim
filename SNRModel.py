@@ -1,3 +1,23 @@
+#  ____  ____      _    __  __  ____ ___
+# |  _ \|  _ \    / \  |  \/  |/ ___/ _ \
+# | | | | |_) |  / _ \ | |\/| | |  | | | |
+# | |_| |  _ <  / ___ \| |  | | |__| |_| |
+# |____/|_| \_\/_/   \_\_|  |_|\____\___/
+#                           research group
+#                             dramco.be/
+#
+#  KU Leuven - Technology Campus Gent,
+#  Gebroeders De Smetstraat 1,
+#  B-9000 Gent, Belgium
+#
+#      Created: 2018-02-01
+#       Author: Gilles Callebaut
+#      Version: 0.1
+#
+#  Description: SNR Model
+#      Try to derive a model for SNR behaviour of LoRa signals from measurements
+#
+
 import numpy as np
 import requests
 import seaborn as sns
