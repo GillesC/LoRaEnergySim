@@ -5,15 +5,13 @@ import numpy as np
 import LoRaPacket
 from Global import Config
 from LoRaParameters import LoRaParameters
-import PropagationModel
-from Location import Location
 
 
 class Gateway:
     SENSITIVITY = {6: -121, 7: -124, 8: -127, 9: -130, 10: -133, 11: -135, 12: -137}
     ADR_MARGIN_DB = 10  # dB
 
-    def __init__(self, env, location, snr_model, prop_model: PropagationModel.LogShadow):
+    def __init__(self, env, location):
         self.location = location
         self.packet_history = dict()
         self.channel_time_used = dict()
@@ -21,8 +19,6 @@ class Gateway:
             self.channel_time_used[channel] = 0
         self.downlink_packets_lost = []
         self.uplink_packet_weak = []
-        self.snr_model = snr_model
-        self.prop_model = prop_model
         for freq in LoRaParameters.DEFAULT_CHANNELS:
             self.channel_time_used[freq] = 0
         self.num_of_packet_received = 0
@@ -41,8 +37,8 @@ class Gateway:
         For simplification, this algorithm is executed here.
         In addition, the gateway determines the best suitable DL Rx window.
         """
-        if from_node.node_id not in self.packet_history:
-            self.packet_history[from_node.node_id] = deque(maxlen=20)
+        if from_node.id not in self.packet_history:
+            self.packet_history[from_node.id] = deque(maxlen=20)
 
         if packet.rss < self.SENSITIVITY[packet.lora_param.sf]:
             # the packet received is to weak
@@ -53,7 +49,7 @@ class Gateway:
 
         self.num_of_packet_received += 1
 
-        self.packet_history[from_node.node_id].append(packet.snr)
+        self.packet_history[from_node.id].append(packet.snr)
         adr_settings = self.adr(from_node, packet)
 
         if adr_settings is not None:
@@ -117,8 +113,8 @@ class Gateway:
         new_duty_cycle = ((on_time + time_on_air) / (now + time_on_air)) * 100  # on / total time =(on+off)
         return new_duty_cycle <= LoRaParameters.CHANNEL_DUTY_CYCLE_PROC[freq], time_on_air
 
-    def adr(self, from_node, packet):
-        history = self.packet_history[from_node.node_id]
+    def adr(self, from_node, packet: LoRaPacket):
+        history = self.packet_history[from_node.id]
         if len(history) is 20:
             # Execute adr else do nothing
             max_snr = np.amax(np.asanyarray(history))
@@ -135,6 +131,8 @@ class Gateway:
                 adr_required_snr = -17.5
             elif from_node.lora_param.sf == 12:
                 adr_required_snr = -20
+            else:
+                ValueError('SF {} not supported'.format(from_node.lora_param.sf))
 
             snr_margin = max_snr - adr_required_snr - self.ADR_MARGIN_DB
 
@@ -191,5 +189,4 @@ class Gateway:
             weak_ratio = len(self.uplink_packet_weak) / self.num_of_packet_received
             print('Ratio Weak/Received is {0:.2f}%'.format(weak_ratio * 100))
 
-    def get_prop_measurements(self, node_id):
-        return self.prop_measurements[node_id]
+

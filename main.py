@@ -28,22 +28,25 @@ middle = np.round(Config.CELL_SIZE / 2)
 gateway_location = Location(x=middle, y=middle, indoor=False)
 plt.scatter(middle, middle, color='red')
 env = simpy.Environment()
-gateway = Gateway(env, gateway_location, SNRModel(), PropagationModel.LogShadow())
+gateway = Gateway(env, gateway_location)
 nodes = []
-air_interface = AirInterface(gateway)
+air_interface = AirInterface(gateway, PropagationModel.LogShadow(), SNRModel(), env)
 for node_id in range(Config.num_nodes):
     location = Location(min=0, max=Config.CELL_SIZE, indoor=False)
     # location = Location(x=60, y=60, indoor=True)
     # TODO check if random location is more than 1m from gateway
     # node = Node(id, EnergyProfile())
-    energy_profile = EnergyProfile(5.7e-3, 15, tx_power_mW, rx_power={'pre_mW': 8.2, 'pre_ms':3.4, 'rx_lna_on_mW': 39, 'rx_lna_off_mW': 34, 'post_mW': 8.3, 'post_ms': 10.7})
+    energy_profile = EnergyProfile(5.7e-3, 15, tx_power_mW,
+                                   rx_power={'pre_mW': 8.2, 'pre_ms': 3.4, 'rx_lna_on_mW': 39, 'rx_lna_off_mW': 34,
+                                             'post_mW': 8.3, 'post_ms': 10.7})
     lora_param = LoRaParameters(freq=np.random.choice(LoRaParameters.DEFAULT_CHANNELS),
                                 sf=np.random.choice(LoRaParameters.SPREADING_FACTORS),
                                 bw=125, cr=5, crc_enabled=1, de_enabled=0, header_implicit_mode=0, tp=14)
     # lora_param = LoRaParameters(freq=np.random.choice(LoRaParameters.DEFAULT_CHANNELS),
     #                             sf=12,
     #                             bw=125, cr=5, crc_enabled=1, de_enabled=0, header_implicit_mode=0, tp=14)
-    node = Node(node_id, energy_profile, lora_param, 1000*60*60, process_time=5, adr=True, location=location, base_station=gateway, env=env, payload_size=16, air_interface=air_interface)
+    node = Node(node_id, energy_profile, lora_param, 1000 * 60 * 60, process_time=5, adr=True, location=location,
+                base_station=gateway, env=env, payload_size=16, air_interface=air_interface)
     nodes.append(node)
     env.process(node.run())
     plt.scatter(location.x, location.y, color='blue')
@@ -60,10 +63,9 @@ env.run(until=Config.SIMULATION_TIME)
 
 for node in nodes:
     node.log()
-    measurements = gateway.get_prop_measurements(node.node_id)
+    measurements = air_interface.get_prop_measurements(node.id)
 
     node.plot(measurements)
-
 
 gateway.log()
 air_interface.log()

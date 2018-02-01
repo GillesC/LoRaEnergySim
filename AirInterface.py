@@ -3,7 +3,6 @@ from Location import Location
 from Gateway import Gateway
 from LoRaPacket import LoRaPacket
 import matplotlib.pyplot as plt
-import random
 
 from SNRModel import SNRModel
 
@@ -100,8 +99,7 @@ class AirInterface:
         if p1.start_on_air < p2_critical_section[1] or p1.start_on_air + p1.time_on_air > p2_critical_section[0]:
             p1.collided = True
 
-        # if p1 has not yet collided but they time overlap
-        if not p1.collided:
+        #TODO
 
 
     def collision(self, packet) -> bool:
@@ -111,13 +109,13 @@ class AirInterface:
         for other in self.packages_in_air:
             if other.node.id != packet.node.id:
                 print(">> node {} (sf:{} bw:{} freq:{:.6e})".format(
-                    other.node.id, other.packet.lora_param.sf, other.packet.lora_param.bw,
-                    other.packet.lora_param.freq))
-                if AirInterface.frequency_collision(packet, other.packet) and AirInterface.sf_collision(packet,
-                                                                                                        other.packet):
-                    if AirInterface.timing_collision(packet, other.packet):
+                    other.node.id, other.lora_param.sf, other.lora_param.bw,
+                    other.lora_param.freq))
+                if AirInterface.frequency_collision(packet, other) and AirInterface.sf_collision(packet,
+                                                                                                        other):
+                    if AirInterface.timing_collision(packet, other):
                         # check who collides in the power domain
-                        AirInterface.power_collision(packet, other.packet)
+                        AirInterface.power_collision(packet, other)
         return packet.collided
 
     # color_values = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f']
@@ -138,7 +136,7 @@ class AirInterface:
             This method checks if this packet has collided
             :return bool (True collided or False not collided)"""
         from_node = packet.node
-        node_id = from_node.node_id
+        node_id = from_node.id
         rss = self.prop_model.tp_to_rss(from_node.location.indoor, packet.lora_param.tp,
                                         Location.distance(self.gateway.location, packet.node.location))
         if node_id not in self.prop_measurements:
@@ -168,3 +166,6 @@ class AirInterface:
 
     def log(self):
         print('Total number of packets in the air {}'.format(self.num_of_packets_send))
+
+    def get_prop_measurements(self, node_id):
+        return self.prop_measurements[node_id]
