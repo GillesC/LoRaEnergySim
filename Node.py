@@ -26,7 +26,7 @@ class Node:
     def __init__(self, node_id, energy_profile: EnergyProfile, lora_parameters, sleep_time, process_time, adr, location,
                  base_station: Gateway, env, payload_size, air_interface):
         self.adr = adr
-        self.node_id = node_id
+        self.id = node_id
         self.energy_profile = energy_profile
         self.base_station = base_station
         self.process_time = process_time
@@ -65,7 +65,7 @@ class Node:
         #                label=lora_param_setting)  # 140 default
         # value (top of figure)
 
-        plt.title(self.node_id)
+        plt.title(self.id)
 
         plt.subplot(3, 1, 2)
         plt.plot(prop_measurements['time'], prop_measurements['snr'], label='SNR (dBm)')
@@ -89,10 +89,10 @@ class Node:
         self.env.timeout(random_wait)
         if Config.PRINT_ENABLED:
             print('{} ms delayed prior to joining'.format(random_wait))
-            print('{} joining the network'.format(self.node_id))
+            print('{} joining the network'.format(self.id))
             self.join(self.env)
         if Config.PRINT_ENABLED:
-            print('{}: joined the network'.format(self.node_id))
+            print('{}: joined the network'.format(self.id))
         while True:
             # added also a random wait to accommodate for any timing issues on the node itself
             random_wait = np.random.randint(0, Config.MAX_DELAY_BEFORE_SLEEP_MS)
@@ -104,12 +104,12 @@ class Node:
 
             # ------------SENDING------------ #
             if Config.PRINT_ENABLED:
-                print('{}: SENDING packet'.format(self.node_id))
+                print('{}: SENDING packet'.format(self.id))
             packet = LoRaPacket.LoRaPacket(self, self.env.now, self.lora_param, self.payload_size)
             downlink_message = yield self.env.process(self.send(packet))
             self.process_downlink_message(downlink_message)
             if Config.PRINT_ENABLED:
-                print('{}: DONE sending'.format(self.node_id))
+                print('{}: DONE sending'.format(self.id))
 
     # [----JOIN----]        [rx1]
     # computes time spent in different states during join procedure
@@ -126,7 +126,7 @@ class Node:
     def join_tx(self):
 
         if Config.PRINT_ENABLED:
-            print('{}: \t JOIN TX'.format(self.node_id))
+            print('{}: \t JOIN TX'.format(self.id))
         energy = LoRaParameters.JOIN_TX_ENERGY_MJ
 
         power = (LoRaParameters.JOIN_TX_ENERGY_MJ / LoRaParameters.JOIN_TX_TIME_MS) * 1000
@@ -137,7 +137,7 @@ class Node:
 
     def join_wait(self):
         if Config.PRINT_ENABLED:
-            print('{}: \t JOIN WAIT'.format(self.node_id))
+            print('{}: \t JOIN WAIT'.format(self.id))
         self.track_power(self.energy_profile.sleep_power_mW)
         yield self.env.timeout(LoRaParameters.JOIN_ACCEPT_DELAY1)
         energy = LoRaParameters.JOIN_ACCEPT_DELAY1 * self.energy_profile.sleep_power_mW
@@ -148,7 +148,7 @@ class Node:
     def join_rx(self):
         # TODO RX1 and RX2
         if Config.PRINT_ENABLED:
-            print('{}: \t JOIN RX'.format(self.node_id))
+            print('{}: \t JOIN RX'.format(self.id))
         power = (LoRaParameters.JOIN_RX_ENERGY_MJ / LoRaParameters.JOIN_RX_TIME_MS) * 1000
         self.track_power(power)
         yield self.env.timeout(LoRaParameters.JOIN_RX_TIME_MS)
@@ -165,7 +165,7 @@ class Node:
 
         #      Received at BS      #
         if Config.PRINT_ENABLED:
-            print('{}: \t REC at BS'.format(self.node_id))
+            print('{}: \t REC at BS'.format(self.id))
         downlink_message = self.base_station.packet_received(self, packet, self.env.now)
 
         yield self.env.process(self.send_rx(self.env, packet, downlink_message))
@@ -179,8 +179,7 @@ class Node:
         if downlink_message is None:
             ack_received = False
 
-
-        #TODO first extract information, than process it
+        # TODO first extract information, than process it
 
         if downlink_message is not None:
 
@@ -209,12 +208,9 @@ class Node:
                     self.change_lora_param[lora_param_str] = []
                 self.change_lora_param[lora_param_str].append(self.env.now)
 
-
-
-
     def log(self):
         if Config.LOG_ENABLED:
-            print('---------- LOG from Node {} ----------'.format(self.node_id))
+            print('---------- LOG from Node {} ----------'.format(self.id))
             print('\t Location {},{}'.format(self.location.x, self.location.y))
             print('\t LoRa Param {}'.format(self.lora_param))  # TODO make a list
             print('\t ADR {}'.format(self.adr))
@@ -227,13 +223,13 @@ class Node:
 
     def send_tx(self, packet):
         if Config.PRINT_ENABLED:
-            print('{}: \t TX'.format(self.node_id))
+            print('{}: \t TX'.format(self.id))
 
         # self.base_station.packet_in_air(packet)
         airtime_ms = packet.my_time_on_air()
         energy_mJ = (airtime_ms * self.energy_profile.tx_power_mW[
             packet.lora_param.tp]) / 1000 + LoRaParameters.RADIO_TX_PREP_ENERGY_MJ
-        self.air_interface.packet_in_air(packet, self.env.now, airtime_ms)
+
 
         power_prep_mW = LoRaParameters.RADIO_TX_PREP_ENERGY_MJ / (LoRaParameters.RADIO_TX_PREP_TIME_MS * 1000)
 
@@ -241,11 +237,16 @@ class Node:
         yield self.env.timeout(LoRaParameters.RADIO_TX_PREP_TIME_MS)
         self.track_power(power_prep_mW)
 
+        packet.on_air = self.env.now
+        self.air_interface.packet_in_air(packet)
+
         power_tx_mW = self.energy_profile.tx_power_mW[packet.lora_param.tp]
 
         self.track_power(power_tx_mW)
         yield self.env.timeout(airtime_ms)
         self.track_power(power_tx_mW)
+
+        self.air_interface.packet_received(packet)
 
         self.track_energy('tx', energy_mJ)
 
@@ -271,7 +272,7 @@ class Node:
 
         #            RX1 wait             #
         if Config.PRINT_ENABLED:
-            print('{}: \t WAIT'.format(self.node_id))
+            print('{}: \t WAIT'.format(self.id))
 
         self.track_power(self.energy_profile.sleep_power_mW)
         yield env.timeout(LoRaParameters.RX_WINDOW_1_DELAY)
@@ -280,7 +281,7 @@ class Node:
         self.track_energy('sleep', energy)
 
         if Config.PRINT_ENABLED:
-            print('{}: \t\t RX1'.format(self.node_id))
+            print('{}: \t\t RX1'.format(self.id))
         rx_1_rx_time, rx_1_rx_energy = yield env.process(self.send_rx_ack(1, packet, rx_on_rx1))
 
         self.track_power(self.energy_profile.sleep_power_mW)
@@ -290,7 +291,7 @@ class Node:
         self.track_power(self.energy_profile.sleep_power_mW)
 
         if Config.PRINT_ENABLED:
-            print('{}: \t\t RX2'.format(self.node_id))
+            print('{}: \t\t RX2'.format(self.id))
 
         if not rx_on_rx1:
             # if rx on rx1 than no more rx2
@@ -345,7 +346,7 @@ class Node:
     def sleep(self):
         # ------------SLEEPING------------ #
         if Config.PRINT_ENABLED:
-            print('{}: START sleeping'.format(self.node_id))
+            print('{}: START sleeping'.format(self.id))
         start = self.env.now
 
         self.track_power(self.energy_profile.sleep_power_mW)
@@ -359,12 +360,12 @@ class Node:
         self.track_energy('sleep', energy)
 
         if Config.PRINT_ENABLED:
-            print('{}: Waking up [time: {}; energy: {}]'.format(self.node_id, self.env.now, energy))
+            print('{}: Waking up [time: {}; energy: {}]'.format(self.id, self.env.now, energy))
 
     def processing(self):
         # ------------PROCESSING------------ #
         if Config.PRINT_ENABLED:
-            print('{}: PROCESSING'.format(self.node_id))
+            print('{}: PROCESSING'.format(self.id))
         start = self.env.now
         self.track_power(self.energy_profile.proc_power_mW)
 
@@ -379,7 +380,7 @@ class Node:
         self.track_energy('processing', energy)
 
         if Config.PRINT_ENABLED:
-            print('{}: DONE PROCESSING [time: {}; energy: {}]'.format(self.node_id, self.env.now, energy))
+            print('{}: DONE PROCESSING [time: {}; energy: {}]'.format(self.id, self.env.now, energy))
 
     def track_power(self, power_mW):
         self.power_tracking['time'].append(self.env.now)
@@ -389,5 +390,4 @@ class Node:
         self.energy_tracking[state] += energy_consumed_mJ
 
     def message_lost(self):
-        pass #TODO
-
+        pass  # TODO

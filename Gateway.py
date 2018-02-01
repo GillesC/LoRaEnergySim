@@ -44,13 +44,7 @@ class Gateway:
         if from_node.node_id not in self.packet_history:
             self.packet_history[from_node.node_id] = deque(maxlen=20)
 
-        rss = self.prop_model.tp_to_rss(from_node.location.indoor, packet.lora_param.tp,
-                                        Location.distance(self.location, from_node.location))
-
-        if from_node.node_id not in self.prop_measurements:
-            self.prop_measurements[from_node.node_id] = {'rss': [], 'snr': [], 'time': []}
-
-        if rss < self.SENSITIVITY[packet.lora_param.sf]:
+        if packet.rss < self.SENSITIVITY[packet.lora_param.sf]:
             # the packet received is to weak
             downlink_message['weak_packet'] = True
             downlink_message['lost'] = True
@@ -59,13 +53,7 @@ class Gateway:
 
         self.num_of_packet_received += 1
 
-        snr = self.snr_model.rss_to_snr(rss)
-
-        self.prop_measurements[from_node.node_id]['time'].append(now)
-        self.prop_measurements[from_node.node_id]['rss'].append(rss)
-        self.prop_measurements[from_node.node_id]['snr'].append(snr)
-
-        self.packet_history[from_node.node_id].append(snr)
+        self.packet_history[from_node.node_id].append(packet.snr)
         adr_settings = self.adr(from_node, packet)
 
         if adr_settings is not None:

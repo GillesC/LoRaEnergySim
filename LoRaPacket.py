@@ -28,6 +28,9 @@ class LoRaPacket:
         self.collided = collided
         self.received = False
         self.time_on_air = None
+        self.rss = None
+        self.snr = None
+        self.on_air = None
 
     # this function computes the airtime of a packet
     # for a packet with `payloadSize` in bytes
