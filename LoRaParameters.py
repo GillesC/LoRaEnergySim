@@ -56,6 +56,9 @@ class LoRaParameters:
     # Maximum payload with respect to the datarate index. Cannot operate with repeater.
     MaxPayloadOfDatarate = [51, 51, 51, 115, 242, 242, 242, 242]
 
+    MAX_ACK_RETRIES = 8
+    LORAMAC_TX_MIN_DATARATE = 0
+
     # CR: % 5..8 This is the error correction coding. Higher values mean more overhead.
     # header_implicit_mode -> header is removed
     def __init__(self, freq, sf: int, bw, cr, crc_enabled, de_enabled, header_implicit_mode, tp=14):
