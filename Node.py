@@ -116,7 +116,7 @@ class Node:
             self.last_packet = packet
             downlink_message = yield self.env.process(self.send(packet))
             if downlink_message is None:
-                self.dl_message_lost(packet)
+                yield self.env.process(self.dl_message_lost(packet))
             else:
                 self.process_downlink_message(downlink_message)
 
@@ -201,7 +201,7 @@ class Node:
 
             if downlink_message.meta.is_lost():
                 self.lost_packages_time.append(self.env.now)
-                self.dl_message_lost(self.last_packet)
+                yield self.env.process(self.dl_message_lost(self.last_packet))
 
             if downlink_message.adr_param is not None:
                 if int(self.lora_param.dr) != int(downlink_message.adr_param['dr']):
@@ -404,17 +404,17 @@ class Node:
 
     def dl_message_lost(self, packet: UplinkMessage):
         if self.adr:
-            if self.last_packet.ack_retries_cnt <= LoRaParameters.MAX_ACK_RETRIES:
+            if self.last_packet.ack_retries_cnt < LoRaParameters.MAX_ACK_RETRIES:
                 self.last_packet.ack_retries_cnt += 1
                 if (self.last_packet.ack_retries_cnt % 2) == 1:
                     dr = np.amax([self.lora_param.dr - 1, LoRaParameters.LORAMAC_TX_MIN_DATARATE])
                     self.lora_param.change_dr_to(dr)
 
-                print('retry {}'.format(self.last_packet.ack_retries_cnt))
+                #print('retry {}'.format(self.last_packet.ack_retries_cnt))
                 downlink_message = yield self.env.process(self.send(packet))
 
                 if downlink_message is None:
-                    self.dl_message_lost(packet)
+                    yield self.env.process(self.dl_message_lost(packet))
                 else:
                     self.process_downlink_message(downlink_message)
 
