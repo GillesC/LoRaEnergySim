@@ -7,6 +7,8 @@ r = requests.get("https://dramco.be/api/lora/lora_packets.php")
 rssi = {}
 snr = {}
 
+SUB_PLOTS = False
+
 packet_per_dev = {}
 
 for packet in r.json():
@@ -48,13 +50,21 @@ for device_id, packets in packet_per_dev.items():
             snr.append(float(p['snr']))
             noise.append(float(p['rssi']) - float(p['snr']))
         t = md.date2num(t)
-        ax = plt.subplot(num_of_devices, 1, i)
-        ax.plot(t, rssi, label='RSSI [dBm]')
-        ax.plot(t, snr, label='SNR [dB]')
-        ax.plot(t, noise, label='Noise [dBm]')
-        ax.set_title(device_id)
-        i += 1
+        if SUB_PLOTS:
+            ax = plt.subplot(num_of_devices, 1, i)
+            ax.plot(t, rssi, label='RSSI [dBm]')
+            ax.plot(t, snr, label='SNR [dB]')
+            ax.plot(t, noise, label='Noise [dBm]')
+            ax.set_title(device_id)
+            i += 1
+        else:
+            plt.plot(t, rssi, label='RSSI [dBm]')
+            plt.plot(t, snr, label='SNR [dB]')
+            plt.plot(t, noise, label='Noise [dBm]')
+            plt.title(device_id)
+            plt.legend()
+            plt.show()
 
-
-plt.legend()
-plt.show()
+if SUB_PLOTS:
+    plt.legend()
+    plt.show()

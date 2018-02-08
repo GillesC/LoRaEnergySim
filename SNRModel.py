@@ -28,38 +28,38 @@ sns.set()
 class SNRModel:
 
     def __init__(self, GRID_SIZE=2):
-        print('request GET')
-        r = requests.get("https://dramco.be/api/lora/lora_packets.php")
-
-        noise_per_dev = {}
-
-        print('processing packets')
-        self.packets = r.json()
-        for packet in self.packets:
-            dev_id = packet['dev_id']
-            if dev_id not in noise_per_dev:
-                noise_per_dev[dev_id] = []
-            noise_per_dev[dev_id].append(float(packet['rssi']) - float(packet['snr']))
-
-        print('processing noise values')
-        mean_std_values = []
-        mean_mean_values = []
-        for device_id, noise_values in noise_per_dev.items():
-            noise_values = np.asarray(noise_values, dtype=np.float)
-            std_noise = np.std(noise_values,
-                               ddof=1)  # for ddof see https://stackoverflow.com/questions/27600207/why-does-numpy-std-give-a-different-result-to-matlab-std
-            mean_noise = np.mean(noise_values)
-            if std_noise >= 0:
-                mean_std_values.append(std_noise)
-                mean_mean_values.append(mean_noise)
-            print('Device {}\t mean: {} and std: {} (num of values: {})'.format(device_id, mean_noise, std_noise,
-                                                                                np.size(noise_values)))
-
-        mean_std_values = np.mean(mean_std_values)
-        mean_mean_values = np.mean(mean_mean_values)
-        print('Mean mean value:{} std value: {}'.format(mean_mean_values, mean_std_values))
-        self.noise = mean_mean_values
-        self.std_noise = mean_std_values
+        # print('request GET')
+        # r = requests.get("https://dramco.be/api/lora/lora_packets.php")
+        #
+        # noise_per_dev = {}
+        #
+        # print('processing packets')
+        # self.packets = r.json()
+        # for packet in self.packets:
+        #     dev_id = packet['dev_id']
+        #     if dev_id not in noise_per_dev:
+        #         noise_per_dev[dev_id] = []
+        #     noise_per_dev[dev_id].append(float(packet['rssi']) - float(packet['snr']))
+        #
+        # print('processing noise values')
+        # mean_std_values = []
+        # mean_mean_values = []
+        # for device_id, noise_values in noise_per_dev.items():
+        #     noise_values = np.asarray(noise_values, dtype=np.float)
+        #     std_noise = np.std(noise_values,
+        #                        ddof=1)  # for ddof see https://stackoverflow.com/questions/27600207/why-does-numpy-std-give-a-different-result-to-matlab-std
+        #     mean_noise = np.mean(noise_values)
+        #     if std_noise >= 0:
+        #         mean_std_values.append(std_noise)
+        #         mean_mean_values.append(mean_noise)
+        #     print('Device {}\t mean: {} and std: {} (num of values: {})'.format(device_id, mean_noise, std_noise,
+        #                                                                         np.size(noise_values)))
+        #
+        # mean_std_values = np.mean(mean_std_values)
+        # mean_mean_values = np.mean(mean_mean_values)
+        # print('Mean mean value:{} std value: {}'.format(mean_mean_values, mean_std_values))
+        self.noise = -80 #mean_mean_values
+        self.std_noise = 6 #mean_std_values
         # r = requests.get("https://dramco.be/api/lora/lora_packets.php")
         # rssi = {}
         # snr = {}

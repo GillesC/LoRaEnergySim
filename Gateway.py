@@ -40,6 +40,9 @@ class Gateway:
         For simplification, this algorithm is executed here.
         In addition, the gateway determines the best suitable DL Rx window.
         """
+
+        #TODO recheck
+
         if from_node.id not in self.packet_history:
             self.packet_history[from_node.id] = deque(maxlen=20)
 
@@ -54,54 +57,49 @@ class Gateway:
 
         self.packet_history[from_node.id].append(packet.snr)
 
-        if from_node.adr:
-            adr_settings = self.adr(packet)
-            downlink_msg.adr_param = adr_settings
+        downlink_msg.adr_param = self.adr(packet)
 
-            if adr_settings is not None:
+        # first compute if DC can be done for RX1 and RX2
+        possible_rx1, time_on_air_rx1 = self.check_duty_cycle(12, packet.lora_param.sf, packet.lora_param.freq,
+                                                              now)
+        possible_rx2, time_on_air_rx2 = self.check_duty_cycle(12, LoRaParameters.RX_2_DEFAULT_SF,
+                                                              LoRaParameters.RX_2_DEFAULT_FREQ, now)
 
-                # first compute if DC can be done for RX1 and RX2
-                possible_rx1, time_on_air_rx1 = self.check_duty_cycle(12, packet.lora_param.sf, packet.lora_param.freq,
-                                                                      now)
-                possible_rx2, time_on_air_rx2 = self.check_duty_cycle(12, LoRaParameters.RX_2_DEFAULT_SF,
-                                                                      LoRaParameters.RX_2_DEFAULT_FREQ, now)
+        tx_on_rx1 = False
 
+        lost = False
+
+        if packet.lora_param.dr > 3:
+            # we would like sending on the same channel with the same DR
+            if not possible_rx1:
+                if not possible_rx2:
+                    self.downlink_packets_lost.append(packet)
+                    lost = True
+                else:
+                    tx_on_rx1 = False
+            else:
+                tx_on_rx1 = True
+        else:
+            # we would like sending it on RX2 (less robust) but sending with 27dBm
+            if not possible_rx2:
+                if not possible_rx1:
+                    self.downlink_packets_lost.append(packet)
+                    lost = True
+                else:
+                    tx_on_rx1 = True
+            else:
                 tx_on_rx1 = False
 
-                lost = False
+        downlink_meta_msg.scheduled_receive_slot = DownlinkMetaMessage.RX_SLOT_1 if tx_on_rx1 else DownlinkMetaMessage.RX_SLOT_2
 
-                if packet.lora_param.dr > 3:
-                    # we would like sending on the same channel with the same DR
-                    if not possible_rx1:
-                        if not possible_rx2:
-                            self.downlink_packets_lost.append(packet)
-                            lost = True
-                        else:
-                            tx_on_rx1 = False
-                    else:
-                        tx_on_rx1 = True
-                else:
-                    # we would like sending it on RX2 (less robust) but sending with 27dBm
-                    if not possible_rx2:
-                        if not possible_rx1:
-                            self.downlink_packets_lost.append(packet)
-                            lost = True
-                        else:
-                            tx_on_rx1 = True
-                    else:
-                        tx_on_rx1 = False
-
-                downlink_meta_msg.scheduled_receive_slot = DownlinkMetaMessage.RX_SLOT_1 if tx_on_rx1 else DownlinkMetaMessage.RX_SLOT_2
-
-                if not lost:
-                    if tx_on_rx1:
-                        self.channel_time_used[packet.lora_param.freq] += time_on_air_rx1
-                    else:
-                        self.channel_time_used[LoRaParameters.RX_2_DEFAULT_FREQ] += time_on_air_rx2
-                        self.channel_time_used[LoRaParameters.RX_2_DEFAULT_FREQ] += time_on_air_rx2
+        if not lost:
+            if tx_on_rx1:
+                self.channel_time_used[packet.lora_param.freq] += time_on_air_rx1
             else:
-                return None
-        return None
+                self.channel_time_used[LoRaParameters.RX_2_DEFAULT_FREQ] += time_on_air_rx2
+                self.channel_time_used[LoRaParameters.RX_2_DEFAULT_FREQ] += time_on_air_rx2
+
+        return downlink_msg
 
     def check_duty_cycle(self, payload_size, sf, freq, now):
         import LoRaPacket
@@ -114,6 +112,8 @@ class Gateway:
         new_on_time = on_time + time_on_air
         new_total_time = now + time_on_air
 
+        # TODO check DC per channel
+        # off time per channel not total off time
         new_duty_cycle = ((on_time + time_on_air) / (now + time_on_air)) * 100  # on / total time =(on+off)
         return new_duty_cycle <= LoRaParameters.CHANNEL_DUTY_CYCLE_PROC[freq], time_on_air
 

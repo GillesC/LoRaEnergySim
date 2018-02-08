@@ -45,7 +45,7 @@ for node_id in range(Config.num_nodes):
     # lora_param = LoRaParameters(freq=np.random.choice(LoRaParameters.DEFAULT_CHANNELS),
     #                             sf=12,
     #                             bw=125, cr=5, crc_enabled=1, de_enabled=0, header_implicit_mode=0, tp=14)
-    node = Node(node_id, energy_profile, lora_param, 1000 * 60*60*2, process_time=5, adr=True, location=location,
+    node = Node(node_id, energy_profile, lora_param, 1000 * 60*60, process_time=5, adr=True, location=location,
                 base_station=gateway, env=env, payload_size=16, air_interface=air_interface)
     nodes.append(node)
     env.process(node.run())

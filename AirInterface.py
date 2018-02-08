@@ -11,7 +11,6 @@ from SNRModel import SNRModel
 
 
 class AirInterface:
-
     def __init__(self, gateway: Gateway, prop_model: PropagationModel, snr_model: SNRModel, env):
         self.num_of_packets_collided = 0
         self.prop_measurements = {}
@@ -64,32 +63,10 @@ class AirInterface:
         if p1.lora_param.sf == p2.lora_param.sf:
             if Global.Config.PRINT_ENABLED:
                 print("collision sf node {} and node {}".format(p1.node.id, p2.node.id))
-            # p2 may have been lost too, will be marked by other checks
             return True
         if Global.Config.PRINT_ENABLED:
             print("no sf collision")
         return False
-
-    @staticmethod
-    def power_collision(me: UplinkMessage, other: UplinkMessage):
-        power_threshold = 6  # dB
-        if Global.Config.PRINT_ENABLED:
-            print(
-                "pwr: node {0.node.id} {0.rss:3.2f} dBm node {1.node.id} {1.rss:3.2f} dBm; diff {2:3.2f} dBm".format(me,
-                                                                                                                     other,
-                                                                                                                     round(
-                                                                                                                         me.rss - other.rss,
-                                                                                                                         2)))
-        if abs(me.rss - other.rss) < power_threshold:
-            if Global.Config.PRINT_ENABLED:
-                print("collision pwr both node {} and node {} (too close to each other)".format(me.node.id, other.node.id))
-            me.collided = True
-        elif me.rss - other.rss < power_threshold:
-            if Global.Config.PRINT_ENABLED:
-                print("collision pwr node {} overpowered node {}".format(me.node.id, other.node.id))
-            me.collided = True
-        if Global.Config.PRINT_ENABLED:
-            print("p1 wins, p2 lost")
 
     @staticmethod
     def timing_collision(me: UplinkMessage, other: UplinkMessage):
@@ -102,12 +79,27 @@ class AirInterface:
 
         other_end = other.start_on_air + other.my_time_on_air()
 
-        # if p2 ends before p1
         if other_end < critical_section_start or other.start_on_air > critical_section_end:
             # all good
             return False
         else:
             # timing collision
+            return True
+
+    @staticmethod
+    def power_collision(me: UplinkMessage, other: UplinkMessage) -> bool:
+        power_threshold = 6  # dB
+        if Global.Config.PRINT_ENABLED:
+            print(
+                "pwr: node {0.node.id} {0.rss:3.2f} dBm node {1.node.id} {1.rss:3.2f} dBm; diff {2:3.2f} dBm".format(me,
+                                                                                                                     other,
+                                                                                                                     round(
+                                                                                                                         me.rss - other.rss,
+                                                                                                                         2)))
+        if abs(me.rss - other.rss) < power_threshold:
+            if Global.Config.PRINT_ENABLED:
+                print("collision pwr both node {} and node {} (too close to each other)".format(me.node.id,
+                                                                                                other.node.id))
             return True
 
     def collision(self, packet) -> bool:
@@ -126,7 +118,8 @@ class AirInterface:
                 if AirInterface.frequency_collision(packet, other):
                     if AirInterface.sf_collision(packet, other):
                         if AirInterface.timing_collision(packet, other):
-                            AirInterface.power_collision(packet, other)
+                            if AirInterface.power_collision(packet, other):
+                                packet.collided = True
         return packet.collided
 
     color_values = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f']
@@ -163,7 +156,7 @@ class AirInterface:
 
         collided = self.collision(packet)
         if collided:
-            self.num_of_packets_collided +=1
+            self.num_of_packets_collided += 1
         # Do not remove the packet from the air
         # this is used to be certain that the collision algorithm works
         # self.packages_in_air.remove(packet)
@@ -176,13 +169,15 @@ class AirInterface:
         ax.grid(False)
         for package in self.packages_in_air:
             node_id = package.node.id
-            plt.hlines(package.lora_param.freq, package.start_on_air, package.start_on_air+package.my_time_on_air(), color=self.color_per_node[node_id],
+            plt.hlines(package.lora_param.freq, package.start_on_air, package.start_on_air + package.my_time_on_air(),
+                       color=self.color_per_node[node_id],
                        linewidth=2.0)
         plt.show()
 
     def log(self):
         print('Total number of packets in the air {}'.format(self.num_of_packets_send))
-        print('Total number of packets collided {} {:2.2f}%'.format(self.num_of_packets_collided, self.num_of_packets_collided*100/self.num_of_packets_send))
+        print('Total number of packets collided {} {:2.2f}%'.format(self.num_of_packets_collided,
+                                                                    self.num_of_packets_collided * 100 / self.num_of_packets_send))
 
     def get_prop_measurements(self, node_id):
         return self.prop_measurements[node_id]

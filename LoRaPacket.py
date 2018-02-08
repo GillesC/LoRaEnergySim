@@ -62,6 +62,15 @@ class UplinkMessage:
     def set_random_freq(self):
         self.lora_param.freq = np.random.choice(LoRaParameters.DEFAULT_CHANNELS)
 
+    @property
+    def sf(self):
+        # to be sure to return an int
+        return int(self.lora_param.sf)
+
+    @sf.setter
+    def sf(self, sf):
+        self.lora_param.sf = int(sf)
+
 
 class DownlinkMetaMessage:
     RX_SLOT_1 = 1
