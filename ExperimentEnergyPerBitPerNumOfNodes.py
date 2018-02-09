@@ -22,20 +22,23 @@ def plot_time(_env):
 
 
 mean_energy_per_bit = dict()
+mean_unique_packets_sent = dict()
+mean_packets_sent = dict()
 
 for num_nodes in range(10, 1000, 10):
     mean_energy_per_bit[num_nodes] = 0
+    print('{} nodes in network'.format(num_nodes))
 
     tx_power_mW = {2: 91.8, 5: 95.9, 8: 101.6, 11: 120.8, 14: 146.5}  # measured TX power for each possible TP
     middle = np.round(Config.CELL_SIZE / 2)
     gateway_location = Location(x=middle, y=middle, indoor=False)
-    #plt.scatter(middle, middle, color='red')
+    # plt.scatter(middle, middle, color='red')
     env = simpy.Environment()
     gateway = Gateway(env, gateway_location)
     nodes = []
     air_interface = AirInterface(gateway, PropagationModel.LogShadow(), SNRModel(), env)
 
-    for node_id in range(Config.num_nodes):
+    for node_id in range(num_nodes):
         location = Location(min=0, max=Config.CELL_SIZE, indoor=False)
         # location = Location(x=60, y=60, indoor=True)
         # TODO check if random location is more than 1m from gateway
@@ -50,7 +53,7 @@ for num_nodes in range(10, 1000, 10):
                     base_station=gateway, env=env, payload_size=16, air_interface=air_interface)
         nodes.append(node)
         env.process(node.run())
-        #plt.scatter(location.x, location.y, color='blue')
+        # plt.scatter(location.x, location.y, color='blue')
 
     # axes = plt.gca()
     # axes.set_xlim([0, Config.CELL_SIZE])
@@ -61,15 +64,34 @@ for num_nodes in range(10, 1000, 10):
     d = datetime.timedelta(milliseconds=Config.SIMULATION_TIME)
     print('Running simulator for {}.'.format(d))
     env.run(until=Config.SIMULATION_TIME)
+    mean_energy_per_bit[num_nodes] = 0
+    mean_unique_packets_sent[num_nodes] = 0
+    mean_packets_sent[num_nodes] = 0
 
     for node in nodes:
         # node.log()
         measurements = air_interface.get_prop_measurements(node.id)
         # node.plot(measurements)
         mean_energy_per_bit[num_nodes] += node.energy_per_bit()
+        mean_unique_packets_sent[num_nodes] += node.num_unique_packets_sent
+        mean_packets_sent[num_nodes] += node.packets_sent
+
         # print('E/bit {}'.format(energy_per_bit))
 
     mean_energy_per_bit[num_nodes] = mean_energy_per_bit[num_nodes] / num_nodes
-    plt.scatter(num_nodes, mean_energy_per_bit[num_nodes])
+    mean_unique_packets_sent[num_nodes] = mean_unique_packets_sent[num_nodes] / num_nodes
+    mean_packets_sent[num_nodes] = mean_packets_sent[num_nodes] / num_nodes
+
+    print('E/bit {}'.format(mean_energy_per_bit[num_nodes]))
+    plt.subplot(3, 1, 1)
+    plt.scatter(num_nodes, mean_energy_per_bit[num_nodes], label='Mean energy per bit')
+
+    print('Unique packets {}'.format(mean_unique_packets_sent[num_nodes]))
+    plt.subplot(3, 1, 2)
+    plt.scatter(num_nodes, mean_unique_packets_sent[num_nodes], label='Mean unique packets sent')
+
+    print('Total packets {}'.format(mean_packets_sent[num_nodes]))
+    plt.subplot(3, 1, 3)
+    plt.scatter(num_nodes, mean_packets_sent[num_nodes], label='Mean packets sent')
 
 plt.show()

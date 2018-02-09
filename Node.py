@@ -467,7 +467,7 @@ class Node:
                 pass
 
     def energy_per_bit(self) -> float:
-        return self.total_energy_consumed() / (self.num_unique_packets_sent * self.payload_size * 8)
+        return self.total_energy_consumed() / (self.packets_sent * self.payload_size * 8)
 
     def total_energy_consumed(self) -> float:
         return self.energy_tracking['tx'] + self.energy_tracking['rx'] + self.energy_tracking['sleep'] + \

@@ -31,7 +31,7 @@ env = simpy.Environment()
 gateway = Gateway(env, gateway_location)
 nodes = []
 air_interface = AirInterface(gateway, PropagationModel.LogShadow(), SNRModel(), env)
-for node_id in range(Config.num_nodes):
+for node_id in range(100):
     location = Location(min=0, max=Config.CELL_SIZE, indoor=False)
     # location = Location(x=60, y=60, indoor=True)
     # TODO check if random location is more than 1m from gateway
