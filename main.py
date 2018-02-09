@@ -61,10 +61,13 @@ d = datetime.timedelta(milliseconds=Config.SIMULATION_TIME)
 print('Running simulator for {}.'.format(d))
 env.run(until=Config.SIMULATION_TIME)
 
+
 for node in nodes:
-    node.log()
+    #node.log()
     measurements = air_interface.get_prop_measurements(node.id)
-    node.plot(measurements)
+    #node.plot(measurements)
+    energy_per_bit = node.energy_per_bit()
+    #print('E/bit {}'.format(energy_per_bit))
 
 gateway.log()
 air_interface.log()

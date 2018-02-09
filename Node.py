@@ -134,7 +134,7 @@ class Node:
             if Config.PRINT_ENABLED:
                 print('{}: DONE sending'.format(self.id))
 
-            self.num_unique_packets_sent += 1 # at the end to be sure that this packet was tx
+            self.num_unique_packets_sent += 1  # at the end to be sure that this packet was tx
 
     # [----JOIN----]        [rx1]
     # computes time spent in different states during join procedure
@@ -190,14 +190,14 @@ class Node:
 
         if on_time != 0:
 
-            duty_cycle = ((on_time +airtime )/ (self.env.now - self.start_device_active))*100
+            duty_cycle = ((on_time + airtime) / (self.env.now - self.start_device_active)) * 100
 
             if duty_cycle > LoRaParameters.CHANNEL_DUTY_CYCLE_PROC[channel]:
-                max_dc = LoRaParameters.CHANNEL_DUTY_CYCLE_PROC[channel]/100
+                max_dc = LoRaParameters.CHANNEL_DUTY_CYCLE_PROC[channel] / 100
                 total_time = self.env.now - self.start_device_active
                 # we need to wait to respect the duty cycle
-                wait = (on_time + airtime - max_dc*total_time - max_dc*airtime)/max_dc
-                #check_dc = (on_time + airtime)/(total_time+wait+airtime)
+                wait = (on_time + airtime - max_dc * total_time - max_dc * airtime) / max_dc
+                # check_dc = (on_time + airtime)/(total_time+wait+airtime)
                 if Config.PRINT_ENABLED:
                     print('Waiting {} to respect the duty cycle'.format(wait))
                 yield self.env.timeout(wait)
@@ -237,14 +237,14 @@ class Node:
 
             if downlink_message.adr_param is not None:
                 if int(self.lora_param.dr) != int(downlink_message.adr_param['dr']):
-                    #if Config.PRINT_ENABLED:
-                    print('\t\t Change DR {} to {}'.format(self.lora_param.dr, downlink_message.adr_param['dr']))
+                    if Config.PRINT_ENABLED:
+                        print('\t\t Change DR {} to {}'.format(self.lora_param.dr, downlink_message.adr_param['dr']))
                     self.lora_param.change_dr_to(downlink_message.adr_param['dr'])
                     changed = True
                 # change tp based on downlink_message['tp']
                 if int(self.lora_param.tp) != int(downlink_message.adr_param['tp']):
-                    #if Config.PRINT_ENABLED:
-                    print('\t\t Change TP {} to {}'.format(self.lora_param.tp, downlink_message.adr_param['tp']))
+                    if Config.PRINT_ENABLED:
+                        print('\t\t Change TP {} to {}'.format(self.lora_param.tp, downlink_message.adr_param['tp']))
                     self.lora_param.change_tp_to(downlink_message.adr_param['tp'])
                     changed = True
 
@@ -451,7 +451,7 @@ class Node:
                     self.lora_param.change_dr_to(dr)
 
                 # print('retry {}'.format(self.last_packet.ack_retries_cnt))
-                self.num_retransmission +=1
+                self.num_retransmission += 1
                 downlink_message = yield self.env.process(self.send(packet))
 
                 if downlink_message is None:
@@ -463,4 +463,12 @@ class Node:
 
             else:
                 # TODO go to default
+                NotImplementedError('This is not yet implemented')
                 pass
+
+    def energy_per_bit(self) -> float:
+        return self.total_energy_consumed() / (self.num_unique_packets_sent * self.payload_size * 8)
+
+    def total_energy_consumed(self) -> float:
+        return self.energy_tracking['tx'] + self.energy_tracking['rx'] + self.energy_tracking['sleep'] + \
+               self.energy_tracking['processing']

@@ -109,10 +109,6 @@ class Gateway:
 
         on_time = self.channel_time_used[freq]
 
-        new_on_time = on_time + time_on_air
-        new_total_time = now + time_on_air
-
-        # TODO check DC per channel
         # off time per channel not total off time
         new_duty_cycle = ((on_time + time_on_air) / (now + time_on_air)) * 100  # on / total time =(on+off)
         return new_duty_cycle <= LoRaParameters.CHANNEL_DUTY_CYCLE_PROC[freq], time_on_air
