@@ -22,7 +22,7 @@ def plot_time(_env):
         print('.', end='', flush=True)
         yield _env.timeout(np.round(Config.SIMULATION_TIME / 10))
 
-
+energy_per_bit = 0
 tx_power_mW = {2: 91.8, 5: 95.9, 8: 101.6, 11: 120.8, 14: 146.5}  # measured TX power for each possible TP
 middle = np.round(Config.CELL_SIZE / 2)
 gateway_location = Location(x=middle, y=middle, indoor=False)
@@ -31,7 +31,7 @@ env = simpy.Environment()
 gateway = Gateway(env, gateway_location)
 nodes = []
 air_interface = AirInterface(gateway, PropagationModel.LogShadow(), SNRModel(), env)
-for node_id in range(100):
+for node_id in range(1000):
     location = Location(min=0, max=Config.CELL_SIZE, indoor=False)
     # location = Location(x=60, y=60, indoor=True)
     # TODO check if random location is more than 1m from gateway
@@ -66,9 +66,11 @@ for node in nodes:
     #node.log()
     measurements = air_interface.get_prop_measurements(node.id)
     #node.plot(measurements)
-    energy_per_bit = node.energy_per_bit()
+    energy_per_bit += node.energy_per_bit()
     #print('E/bit {}'.format(energy_per_bit))
 
+energy_per_bit = energy_per_bit/1000.0
+print('E/bit {}'.format(energy_per_bit))
 gateway.log()
 air_interface.log()
 # air_interface.plot_packets_in_air()

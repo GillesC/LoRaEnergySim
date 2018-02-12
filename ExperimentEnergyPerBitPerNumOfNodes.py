@@ -25,7 +25,7 @@ mean_energy_per_bit = dict()
 mean_unique_packets_sent = dict()
 mean_packets_sent = dict()
 
-for num_nodes in range(10, 1000, 10):
+for num_nodes in range(10, 1000, 100):
     mean_energy_per_bit[num_nodes] = 0
     print('{} nodes in network'.format(num_nodes))
 
