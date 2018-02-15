@@ -74,3 +74,5 @@ print('E/bit {}'.format(energy_per_bit))
 gateway.log()
 air_interface.log()
 # air_interface.plot_packets_in_air()
+
+

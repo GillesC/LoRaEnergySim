@@ -77,30 +77,74 @@ class AirInterface:
         critical_section_start = me.start_on_air + sym_duration * (num_preamble - 5)
         critical_section_end = me.start_on_air + me.my_time_on_air()
 
+        if Global.Config.PRINT_ENABLED:
+            print('P1 has a critical section in [{} - {}]'.format(critical_section_start, critical_section_end))
+
         other_end = other.start_on_air + other.my_time_on_air()
 
         if other_end < critical_section_start or other.start_on_air > critical_section_end:
             # all good
-            return False
+            me_time_collided = False
         else:
             # timing collision
-            return True
+            me_time_collided = True
+
+        sym_duration = 2 ** other.lora_param.sf / (1.0 * other.lora_param.bw)
+        num_preamble = 8
+        critical_section_start = other.start_on_air + sym_duration * (num_preamble - 5)
+        critical_section_end = other.start_on_air + other.my_time_on_air()
+
+        if Global.Config.PRINT_ENABLED:
+            print('P2 has a critical section in [{} - {}]'.format(critical_section_start, critical_section_end))
+
+        me_end = me.start_on_air + me.my_time_on_air()
+
+        if me_end < critical_section_start or me.start_on_air > critical_section_end:
+            # all good
+            other_time_collided = False
+        else:
+            # timing collision
+            other_time_collided = True
+
+        # return who has been time collided (can be with each other)
+        if me_time_collided and other_time_collided:
+            return (me, other)
+        elif me_time_collided:
+            return (me,)
+        elif other_time_collided:
+            return (other_time_collided,)
+        else:
+            return None
 
     @staticmethod
-    def power_collision(me: UplinkMessage, other: UplinkMessage) -> bool:
+    def power_collision(me: UplinkMessage, other: UplinkMessage, time_collided_nodes):
         power_threshold = 6  # dB
         if Global.Config.PRINT_ENABLED:
             print(
-                "pwr: node {0.node.id} {0.rss:3.2f} dBm node {1.node.id} {1.rss:3.2f} dBm; diff {2:3.2f} dBm".format(me,
-                                                                                                                     other,
-                                                                                                                     round(
-                                                                                                                         me.rss - other.rss,
-                                                                                                                         2)))
+                "pwr: node {0.node.id} {0.rss:3.2f} dBm node {1.node.id} {1.rss:3.2f} dBm; diff {2:3.2f} dBm".format(me,other,round(me.rss - other.rss,2)))
         if abs(me.rss - other.rss) < power_threshold:
             if Global.Config.PRINT_ENABLED:
                 print("collision pwr both node {} and node {} (too close to each other)".format(me.node.id,
                                                                                                 other.node.id))
-            return True
+            if me in time_collided_nodes:
+                me.collided = True
+            if other in time_collided_nodes:
+                other.collided = True
+
+        elif me.rss - other.rss < power_threshold:
+            # me has been overpowered by other
+            # me will collided if also time_collided
+
+            if me in time_collided_nodes:
+                if Global.Config.PRINT_ENABLED:
+                    print("collision pwr both node {} has collided by node {}".format(me.node.id,other.node.id))
+                me.collided = True
+        else:
+            # other was overpowered by me
+            if other in time_collided_nodes:
+                if Global.Config.PRINT_ENABLED:
+                    print("collision pwr both node {} has collided by node {}".format(other.node.id,me.node.id))
+                other.collided = True
 
     def collision(self, packet) -> bool:
         if Global.Config.PRINT_ENABLED:
@@ -117,9 +161,9 @@ class AirInterface:
                         other.lora_param.freq))
                 if AirInterface.frequency_collision(packet, other):
                     if AirInterface.sf_collision(packet, other):
-                        if AirInterface.timing_collision(packet, other):
-                            if AirInterface.power_collision(packet, other):
-                                packet.collided = True
+                        time_collided_nodes = AirInterface.timing_collision(packet, other)
+                        if time_collided_nodes is not None:
+                            AirInterface.power_collision(packet, other, time_collided_nodes)
         return packet.collided
 
     color_values = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f']
@@ -152,14 +196,14 @@ class AirInterface:
     def packet_received(self, packet: UplinkMessage) -> bool:
         """Packet has fully received by the gateway
             This method checks if this packet has collided
+            and remove from in the air
             :return bool (True collided or False not collided)"""
 
         collided = self.collision(packet)
         if collided:
             self.num_of_packets_collided += 1
-        # Do not remove the packet from the air
-        # this is used to be certain that the collision algorithm works
-        # self.packages_in_air.remove(packet)
+            # print('Our packet has collided')
+        self.packages_in_air.remove(packet)
         return collided
 
     def plot_packets_in_air(self):
