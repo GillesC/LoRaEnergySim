@@ -24,6 +24,8 @@ class NodeState(Enum):
     TX = auto()
     RADIO_TX_PREP_TIME_MS = auto()
     RX = auto()
+    RADIO_PRE_RX = auto()
+    RADIO_POST_RX = auto()
     PROCESS = auto()
 
 
@@ -31,6 +33,7 @@ class Node:
     def __init__(self, node_id, energy_profile: EnergyProfile, lora_parameters, sleep_time, process_time, adr, location,
                  base_station: Gateway, env, payload_size, air_interface):
 
+        self.num_tx_state_changes = 0
         self.num_no_downlink = 0
         self.num_unique_packets_sent = 0
         self.start_device_active = 0
@@ -65,7 +68,8 @@ class Node:
         self.power_tracking = {'val': [], 'time': []}
         self.energy_measurements = {'val': [], 'time': []}
         self.state_changes = {'val': [], 'time': []}
-        self.energy_tracking = {'sleep': 0, 'processing': 0, 'rx': 0, 'tx': 0}
+        self.energy_tracking = {NodeState(NodeState.SLEEP).name: 0.0, NodeState(NodeState.PROCESS).name: 0.0,
+                                NodeState(NodeState.RX).name: 0.0, NodeState(NodeState.TX).name: 0.0}
 
         self.bytes_sent = 0
 
@@ -118,6 +122,7 @@ class Node:
         if Config.PRINT_ENABLED:
             print('{} ms delayed prior to joining'.format(random_wait))
             print('{} joining the network'.format(self.id))
+            #TODO ERROR!!!!! self.process
             self.join(self.env)
         if Config.PRINT_ENABLED:
             print('{}: joined the network'.format(self.id))
@@ -136,13 +141,13 @@ class Node:
             if Config.PRINT_ENABLED:
                 print('{}: SENDING packet'.format(self.id))
 
-            self.packet_to_sent = UplinkMessage(self, self.env.now, self.payload_size)
-            downlink_message = yield self.env.process(self.send())
+            packet = UplinkMessage(self, self.env.now, self.payload_size)
+            downlink_message = yield self.env.process(self.send(packet))
             if downlink_message is None:
                 self.num_no_downlink += 1
                 yield self.env.process(self.dl_message_lost())
             else:
-                yield self.env.process(self.process_downlink_message(downlink_message))
+                yield self.env.process(self.process_downlink_message(downlink_message, packet))
 
             if Config.PRINT_ENABLED:
                 print('{}: DONE sending'.format(self.id))
@@ -195,16 +200,16 @@ class Node:
 
     # [----transmit----]        [rx1]      [--rx2--]
     # computes time spent in different states during tx and rx one package
-    def send(self):
+    def send(self, packet):
 
-        packet = self.packet_to_sent
+        self.packet_to_sent = packet
         channel = packet.lora_param.freq
         airtime = packet.my_time_on_air()
 
         if self.time_off[channel] > self.env.now:
             # wait for certaint time to respect duty cycle
             wait = self.time_off[channel] - self.env.now
-            self.change_state('sleep')
+            self.change_state(NodeState.SLEEP)
             yield self.env.timeout(wait)
 
         # update time_off time
@@ -241,7 +246,7 @@ class Node:
         if downlink_message.meta.is_lost():
             # this is because no ack could be sent
             self.lost_packages_time.append(self.env.now)
-            yield self.env.process(self.dl_message_lost(uplink_message))
+            yield self.env.process(self.dl_message_lost())
 
         if downlink_message.adr_param is not None:
             if int(self.lora_param.dr) != int(downlink_message.adr_param['dr']):
@@ -270,14 +275,15 @@ class Node:
             print('\t LoRa Param {}'.format(self.lora_param))
             print('\t ADR {}'.format(self.adr))
             print('\t Payload size {}'.format(self.payload_size))
-            print('\t Energy spend transmitting {0:.2f}'.format(self.energy_tracking['tx']))
-            print('\t Energy spend receiving {0:.2f}'.format(self.energy_tracking['rx']))
-            print('\t Energy spend sleeping {0:.2f}'.format(self.energy_tracking['sleep']))
-            print('\t Energy spend processing {0:.2f}'.format(self.energy_tracking['processing']))
+            print('\t Energy spend transmitting {0:.2f}'.format(self.energy_tracking[NodeState(NodeState.TX).name]))
+            print('\t Energy spend receiving {0:.2f}'.format(self.energy_tracking[NodeState(NodeState.RX).name]))
+            print('\t Energy spend sleeping {0:.2f}'.format(self.energy_tracking[NodeState(NodeState.SLEEP).name]))
+            print('\t Energy spend processing {0:.2f}'.format(self.energy_tracking[NodeState(NodeState.PROCESS).name]))
             for lora_param, t in self.change_lora_param.items():
                 print('\t {}:{}'.format(lora_param, t))
             print('Bytes sent by node {}'.format(self.bytes_sent))
             print('Total Packets sent by node {}'.format(self.packets_sent))
+            print('Total Packets sent by node (according to tx state changes) {}'.format(self.num_tx_state_changes))
             print('Unique Packets sent by node {}'.format(self.num_unique_packets_sent))
             print('Retransmissions {}'.format(self.num_retransmission))
             print('Packets collided {}'.format(self.num_collided))
@@ -292,7 +298,6 @@ class Node:
 
         self.change_state(NodeState.RADIO_TX_PREP_TIME_MS)
         yield self.env.timeout(LoRaParameters.RADIO_TX_PREP_TIME_MS)
-
 
         packet.on_air = self.env.now
         self.air_interface.packet_in_air(packet)
@@ -317,120 +322,79 @@ class Node:
 
         self.change_state(NodeState.SLEEP)
 
-        self.track_power(self.energy_profile.sleep_power_mW)
         yield env.timeout(LoRaParameters.RX_WINDOW_1_DELAY)
-        energy = (LoRaParameters.RX_WINDOW_1_DELAY * self.energy_profile.sleep_power_mW) * 1000
-        self.track_power(self.energy_profile.sleep_power_mW)
-        self.track_energy('sleep', energy)
 
         if Config.PRINT_ENABLED:
             print('{}: \t\t RX1'.format(self.id))
 
-        rx_1_rx_time, rx_1_rx_energy = yield env.process(self.send_rx_ack(1, packet, rx_on_rx1))
+        # changed_state is called internally
+        begin = self.env.now
+        yield env.process(self.send_rx_ack(1, packet, rx_on_rx1))
+        rx_1_rx_time = self.env.now - begin
 
-        self.track_energy('rx', rx_1_rx_energy)
-
-        self.track_power(self.energy_profile.sleep_power_mW)
-        sleep_between_rx1_rx2_window = LoRaParameters.RX_WINDOW_2_DELAY - (
-                LoRaParameters.RX_WINDOW_1_DELAY + rx_1_rx_time)
-        yield env.timeout(sleep_between_rx1_rx2_window)
-        self.track_power(self.energy_profile.sleep_power_mW)
+        sleep_between_rx1_rx2_window = LoRaParameters.RX_WINDOW_2_DELAY - (LoRaParameters.RX_WINDOW_1_DELAY + rx_1_rx_time)
+        if sleep_between_rx1_rx2_window > 0:
+            self.change_state(NodeState.SLEEP)
+            yield env.timeout(sleep_between_rx1_rx2_window)
 
         if Config.PRINT_ENABLED:
             print('{}: \t\t RX2'.format(self.id))
 
         if not rx_on_rx1:
-            rx_2_rx_time, rx_2_rx_energy = yield env.process(self.send_rx_ack(2, packet, rx_on_rx2))
-            self.track_power(self.energy_profile.sleep_power_mW)
-            self.track_energy('rx', rx_2_rx_energy)
-            self.track_power(self.energy_profile.sleep_power_mW)
+            # changed_state is called internally
+            yield env.process(self.send_rx_ack(2, packet, rx_on_rx2))
 
     def send_rx_ack(self, rec_window: int, packet: UplinkMessage, ack: bool):
-        rx_energy = 0
 
-        self.track_power(self.energy_profile.rx_power['pre_mW'])
+        self.change_state(NodeState.RADIO_PRE_RX)
         yield self.env.timeout(self.energy_profile.rx_power['pre_ms'])
-        self.track_power(self.energy_profile.rx_power['pre_mW'])
-
-        rx_energy += self.energy_profile.rx_power['pre_mW'] * self.energy_profile.rx_power['pre_ms'] / 1000
 
         if not ack:
 
             if rec_window == 1:
-                rx_time = self.lora_param.RX_1_NO_ACK_AIR_TIME[self.lora_param.dr]
-                rx_energy += self.lora_param.RX_1_NO_ACK_ENERGY_MJ[self.lora_param.dr]
+                rx_time = packet.lora_param.RX_1_NO_ACK_AIR_TIME[packet.lora_param.dr]
+                rx_energy = packet.lora_param.RX_1_NO_ACK_ENERGY_MJ[packet.lora_param.dr]
             else:
-                rx_time = self.lora_param.RX_2_NO_ACK_AIR_TIME
-                rx_energy += self.lora_param.RX_2_NO_ACK_ENERGY_MJ
+                rx_time = packet.lora_param.RX_2_NO_ACK_AIR_TIME
+                rx_energy = packet.lora_param.RX_2_NO_ACK_ENERGY_MJ
 
             power = (rx_energy / rx_time) * 1000
-            self.track_power(power)
-            yield self.env.timeout(rx_time)
-            self.track_power(power)
         else:
             import LoRaPacket
             if rec_window == 1:
-                rx_time = LoRaPacket.time_on_air(12, self.lora_param)
-                rx_energy += rx_time * self.energy_profile.rx_power['rx_lna_on_mW'] / 1000
+                rx_time = LoRaPacket.time_on_air(12, packet.lora_param)
+                rx_energy = (rx_time / 1000) * self.energy_profile.rx_power['rx_lna_on_mW']
                 power = self.energy_profile.rx_power['rx_lna_on_mW']
             else:
-                temp_lora_param = deepcopy(self.lora_param)
+                temp_lora_param = deepcopy(packet.lora_param)
                 temp_lora_param.change_dr_to(3)
                 rx_time = LoRaPacket.time_on_air(12, temp_lora_param)
-                rx_energy += rx_time * self.energy_profile.rx_power['rx_lna_off_mW'] / 1000
+                rx_energy = (rx_time / 1000) * self.energy_profile.rx_power['rx_lna_off_mW']
                 power = self.energy_profile.rx_power['rx_lna_off_mW']
 
-            self.track_power(power)
-            yield self.env.timeout(rx_time)
-            self.track_power(power)
+        self.change_state(NodeState.RX, consumed_power=power, consumed_energy=rx_energy)
+        yield self.env.timeout(rx_time)
 
-            self.track_power(self.energy_profile.rx_power['post_mW'])
+        if ack:
+            self.change_state(NodeState.RADIO_POST_RX)
             yield self.env.timeout(self.energy_profile.rx_power['post_ms'])
-            rx_energy += self.energy_profile.rx_power['post_mW'] * self.energy_profile.rx_power['post_ms'] / 1000
-            self.track_power(self.energy_profile.rx_power['post_mW'])
-
-        return rx_time, rx_energy
 
     def sleep(self):
         # ------------SLEEPING------------ #
         if Config.PRINT_ENABLED:
             print('{}: START sleeping'.format(self.id))
-        start = self.env.now
-
-        self.track_power(self.energy_profile.sleep_power_mW)
+        self.change_state(NodeState.SLEEP)
         yield self.env.timeout(self.sleep_time)
-        self.track_power(self.energy_profile.sleep_power_mW)  # -0.0001 to not overlap in time with next state
-        now = self.env.now
-
-        time = (now - start)
-        energy = (time * self.energy_profile.sleep_power_mW) / 1000
-
-        self.track_energy('sleep', energy)
-
-        if Config.PRINT_ENABLED:
-            print('{}: Waking up [time: {}; energy: {}]'.format(self.id, self.env.now, energy))
 
     def processing(self):
         # ------------PROCESSING------------ #
         if Config.PRINT_ENABLED:
             print('{}: PROCESSING'.format(self.id))
-        start = self.env.now
-        self.track_power(self.energy_profile.proc_power_mW)
-
+        self.change_state(NodeState.PROCESS)
         yield self.env.timeout(self.process_time)
 
-        now = self.env.now
-        time = (now - start)
-        energy = (time * self.energy_profile.sleep_power_mW) / 1000
-
-        self.track_power(self.energy_profile.proc_power_mW)
-
-        self.track_energy('processing', energy)
-
-        if Config.PRINT_ENABLED:
-            print('{}: DONE PROCESSING [time: {}; energy: {}]'.format(self.id, self.env.now, energy))
-
-    def dl_message_lost(self, packet: UplinkMessage):
+    def dl_message_lost(self):
+        packet = self.packet_to_sent
         if packet.is_confirmed_message:
             if packet.ack_retries_cnt < LoRaParameters.MAX_ACK_RETRIES:
                 packet.ack_retries_cnt += 1
@@ -446,7 +410,7 @@ class Node:
 
                 if downlink_message is None:
                     self.num_no_downlink += 1
-                    yield self.env.process(self.dl_message_lost(packet))
+                    yield self.env.process(self.dl_message_lost())
                 else:
                     yield self.env.process(self.process_downlink_message(downlink_message, packet))
 
@@ -454,40 +418,73 @@ class Node:
                 # TODO go to default
                 NotImplementedError('This is not yet implemented')
 
-    def change_state(self, new_state: NodeState):
+    def change_state(self, new_state: NodeState, consumed_power=None, consumed_energy=None):
         if self.current_state == new_state:
             ValueError('You can not change state ({}) when the states are the same'.format(NodeState(new_state).name))
         else:
             self.track_state_change(new_state)
-            self.track_power(self.prev_power_mW) #this for figure purposes only
-            #track power and track energy consumed
+            self.track_power(self.prev_power_mW)  # this for figure purposes only
+            track_node_state = new_state
+            # track power and track energy consumed
             power_consumed_in_state_mW = 0
             energy_consumed_in_state_mJ = 0
             packet = self.packet_to_sent
+            if self.current_state == NodeState.SLEEP:
+                # if the previous state was sleep
+                # record new energy state
+                time_duration_sleep_s = (self.env.now - self.sleep_start_time) / 1000
+                power_consumed_in_state_mW = self.energy_profile.sleep_power_mW
+                energy_consumed_in_state_mJ = power_consumed_in_state_mW * time_duration_sleep_s
+                #first track otherwise the next state will overwrite this
+                self.track_power(power_consumed_in_state_mW)
+                self.track_energy(NodeState.SLEEP, energy_consumed_in_state_mJ)
             if new_state == NodeState.RADIO_TX_PREP_TIME_MS:
-                power_consumed_in_state_mW = LoRaParameters.RADIO_TX_PREP_ENERGY_MJ / (LoRaParameters.RADIO_TX_PREP_TIME_MS * 1000)
+                power_consumed_in_state_mW = LoRaParameters.RADIO_TX_PREP_ENERGY_MJ / (
+                    LoRaParameters.RADIO_TX_PREP_TIME_MS / 1000)
                 energy_consumed_in_state_mJ = LoRaParameters.RADIO_TX_PREP_ENERGY_MJ
+                track_node_state = NodeState.TX
             elif new_state == NodeState.TX:
                 power_consumed_in_state_mW = self.energy_profile.tx_power_mW[packet.lora_param.tp]
-                energy_consumed_in_state_mJ = power_consumed_in_state_mW * (packet.my_time_on_air*1000)
+                energy_consumed_in_state_mJ = power_consumed_in_state_mW * (packet.my_time_on_air() / 1000)
+                self.num_tx_state_changes +=1
+            elif new_state == NodeState.RADIO_PRE_RX:
+                power_consumed_in_state_mW = self.energy_profile.rx_power['pre_mW']
+                energy_consumed_in_state_mJ = self.energy_profile.rx_power['pre_mW'] * self.energy_profile.rx_power[
+                    'pre_ms'] / 1000
+                track_node_state = NodeState.RX
             elif new_state == NodeState.RX:
-            elif new_state == NodeState.OFFLINE:
+                power_consumed_in_state_mW = consumed_power
+                energy_consumed_in_state_mJ = consumed_energy
+            elif new_state == NodeState.RADIO_POST_RX:
+                track_node_state = NodeState.RX
+                power_consumed_in_state_mW = self.energy_profile.rx_power['post_mW']
+                energy_consumed_in_state_mJ = self.energy_profile.rx_power['post_mW'] * (self.energy_profile.rx_power[
+                    'post_ms'] / 1000)
             elif new_state == NodeState.SLEEP:
+                # only set sleep start time
+                # this is handled when a state is changed
+                self.sleep_start_time = self.env.now
+                power_consumed_in_state_mW = self.energy_profile.sleep_power_mW
+                # we can not yet determine energy consumed
             elif new_state == NodeState.PROCESS:
-            else:
+                energy_consumed_in_state_mJ = (self.process_time / 1000) * self.energy_profile.sleep_power_mW
+                power_consumed_in_state_mW = self.energy_profile.sleep_power_mW
+            elif new_state != NodeState.OFFLINE:
                 ValueError('State is not recognized')
 
             self.track_power(power_consumed_in_state_mW)
-            self.track_energy(new_state, energy_consumed_in_state_mJ)
+            self.track_energy(track_node_state, energy_consumed_in_state_mJ)
             self.prev_power_mW = power_consumed_in_state_mW
-
+            self.current_state = new_state
 
     def energy_per_bit(self) -> float:
         return self.total_energy_consumed() / (self.packets_sent * self.payload_size * 8)
 
     def total_energy_consumed(self) -> float:
-        return self.energy_tracking['tx'] + self.energy_tracking['rx'] + self.energy_tracking['sleep'] + \
-               self.energy_tracking['processing']
+        total_energy = 0
+        for key, value in self.energy_tracking.items():
+            total_energy += value
+        return total_energy
 
     def track_power(self, power_mW):
         self.power_tracking['time'].append(self.env.now)

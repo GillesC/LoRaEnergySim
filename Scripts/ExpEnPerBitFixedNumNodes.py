@@ -25,7 +25,7 @@ mean_energy_per_bit = dict()
 mean_unique_packets_sent = dict()
 mean_packets_sent = dict()
 
-num_nodes = 100
+num_nodes = 1000
 
 mean_energy_per_bit[num_nodes] = 0
 print('{} nodes in network'.format(num_nodes))
@@ -71,7 +71,7 @@ mean_packets_sent[num_nodes] = 0
 
 plt.figure(1)
 for node in nodes:
-    # node.log()
+    node.log()
     measurements = air_interface.get_prop_measurements(node.id)
     node.plot(measurements)
     mean_energy_per_bit[num_nodes] += node.energy_per_bit()
