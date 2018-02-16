@@ -21,12 +21,12 @@ def plot_time(_env):
         yield _env.timeout(np.round(Config.SIMULATION_TIME / 10))
 
 
-mean_energy_per_bit = dict()
-mean_unique_packets_sent = dict()
-mean_packets_sent = dict()
+mean_energy_per_bit_list = []
+mean_unique_packets_sent_list = []
+mean_packets_sent_list = []
+num_nodes_list = []
 
-for num_nodes in range(10, 100000, 1000):
-    mean_energy_per_bit[num_nodes] = 0
+for num_nodes in range(1, 1000, 100):
     print('{} nodes in network'.format(num_nodes))
 
     tx_power_mW = {2: 91.8, 5: 95.9, 8: 101.6, 11: 120.8, 14: 146.5}  # measured TX power for each possible TP
@@ -49,8 +49,8 @@ for num_nodes in range(10, 100000, 1000):
         lora_param = LoRaParameters(freq=np.random.choice(LoRaParameters.DEFAULT_CHANNELS),
                                     sf=np.random.choice(LoRaParameters.SPREADING_FACTORS),
                                     bw=125, cr=5, crc_enabled=1, de_enabled=0, header_implicit_mode=0, tp=14)
-        node = Node(node_id, energy_profile, lora_param, 1000 * 60 * 60, process_time=5, adr=True, location=location,
-                    base_station=gateway, env=env, payload_size=16, air_interface=air_interface)
+        node = Node(node_id, energy_profile, lora_param, 1000 * 60, process_time=5, adr=True, location=location,
+                    base_station=gateway, env=env, payload_size=50, air_interface=air_interface)
         nodes.append(node)
         env.process(node.run())
         # plt.scatter(location.x, location.y, color='blue')
@@ -64,36 +64,44 @@ for num_nodes in range(10, 100000, 1000):
     d = datetime.timedelta(milliseconds=Config.SIMULATION_TIME)
     print('Running simulator for {}.'.format(d))
     env.run(until=Config.SIMULATION_TIME)
-    mean_energy_per_bit[num_nodes] = 0
-    mean_unique_packets_sent[num_nodes] = 0
-    mean_packets_sent[num_nodes] = 0
+    mean_energy_per_bit = 0
+    mean_unique_packets_sent = 0
+    mean_packets_sent = 0
 
     for node in nodes:
         # node.log()
         measurements = air_interface.get_prop_measurements(node.id)
         # node.plot(measurements)
-        mean_energy_per_bit[num_nodes] += node.energy_per_bit()
-        mean_unique_packets_sent[num_nodes] += node.num_unique_packets_sent
-        mean_packets_sent[num_nodes] += node.packets_sent
+        mean_energy_per_bit += node.energy_per_bit()
+        mean_unique_packets_sent += node.num_unique_packets_sent
+        mean_packets_sent += node.packets_sent
 
         # print('E/bit {}'.format(energy_per_bit))
 
-    mean_energy_per_bit[num_nodes] = mean_energy_per_bit[num_nodes] / num_nodes
-    mean_unique_packets_sent[num_nodes] = mean_unique_packets_sent[num_nodes] / num_nodes
-    mean_packets_sent[num_nodes] = mean_packets_sent[num_nodes] / num_nodes
+    num_nodes_list.append(num_nodes)
 
-    print('E/bit {}'.format(mean_energy_per_bit[num_nodes]))
-    plt.subplot(3, 1, 1)
-    plt.scatter(num_nodes, mean_energy_per_bit[num_nodes], label='Mean energy per bit')
+    mean_energy_per_bit = mean_energy_per_bit / num_nodes
+    mean_unique_packets_sent = mean_unique_packets_sent / num_nodes
+    mean_packets_sent = mean_packets_sent / num_nodes
 
-    print('Unique packets {}'.format(mean_unique_packets_sent[num_nodes]))
-    plt.subplot(3, 1, 2)
-    plt.scatter(num_nodes, mean_unique_packets_sent[num_nodes], label='Mean unique packets sent')
+    mean_energy_per_bit_list.append(mean_energy_per_bit)
+    mean_unique_packets_sent_list.append(mean_unique_packets_sent)
+    mean_packets_sent_list.append(mean_packets_sent)
 
-    print('Total packets {}'.format(mean_packets_sent[num_nodes]))
-    plt.subplot(3, 1, 3)
-    plt.scatter(num_nodes, mean_packets_sent[num_nodes], label='Mean packets sent')
+    print('E/bit {}'.format(mean_energy_per_bit))
+    print('Unique packets {}'.format(mean_unique_packets_sent))
+    print('Total packets {}'.format(mean_packets_sent))
+
+ax = plt.subplot(3, 1, 1)
+plt.plot(num_nodes_list, mean_energy_per_bit_list)
+ax.set_title('Mean energy per bit')
+
+ax = plt.subplot(3, 1, 2)
+plt.plot(num_nodes_list, mean_unique_packets_sent_list)
+ax.set_title('Mean unique packets sent')
+
+ax = plt.subplot(3, 1, 3)
+plt.plot(num_nodes_list, np.subtract(mean_packets_sent_list, mean_unique_packets_sent_list))
+ax.set_title('Mean extra packets sent')
 
 plt.show()
-
-
