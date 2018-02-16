@@ -7,6 +7,27 @@ from Global import Config
 from LoRaParameters import LoRaParameters
 
 
+# sensititity : https://www.semtech.com/uploads/documents/sx1272.pdf
+def required_snr(dr):
+    req_snr = 0
+    if dr == 5:
+        req_snr = -7.5
+    elif dr == 4:
+        req_snr = -10
+    elif dr == 3:
+        req_snr = -12.5
+    elif dr == 2:
+        req_snr = -15
+    elif dr == 1:
+        req_snr = -17.5
+    elif dr == 0:
+        req_snr = -20
+    else:
+        ValueError('DR {} not supported'.format(dr))
+
+    return req_snr
+
+
 class Gateway:
     SENSITIVITY = {6: -121, 7: -124, 8: -127, 9: -130, 10: -133, 11: -135, 12: -137}
     ADR_MARGIN_DB = 10  # dB
@@ -46,7 +67,9 @@ class Gateway:
         if from_node.id not in self.packet_history:
             self.packet_history[from_node.id] = deque(maxlen=20)
 
-        if packet.rss < self.SENSITIVITY[packet.lora_param.sf]:
+
+
+        if packet.rss < self.SENSITIVITY[packet.lora_param.sf] or packet.snr < required_snr(packet.lora_param.dr):
             # the packet received is to weak
             downlink_meta_msg.weak_packet = True
             self.uplink_packet_weak.append(packet)

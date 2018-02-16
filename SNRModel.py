@@ -148,11 +148,13 @@ class SNRModel:
         #     plt.title(device_id)
         #     # plt.show()
 
+        # noise floor according to https://www.semtech.com/uploads/documents/an1200.22.pdf
+        self.noise_floor = -174 + 10 *np.log10(125e3)
+
     def rss_to_snr(self, rss: float):
         # TODO make a better noise assumptionS
 
-        return rss - self.noise - np.random.uniform(-self.std_noise, self.std_noise)
-
+        return rss - self.noise_floor
 
 def roundup(x, GRID_SIZE):
     x = np.divide(x, GRID_SIZE)
