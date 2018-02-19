@@ -26,7 +26,6 @@ sns.set()
 
 
 class SNRModel:
-
     def __init__(self, GRID_SIZE=2):
         # print('request GET')
         # r = requests.get("https://dramco.be/api/lora/lora_packets.php")
@@ -58,8 +57,8 @@ class SNRModel:
         # mean_std_values = np.mean(mean_std_values)
         # mean_mean_values = np.mean(mean_mean_values)
         # print('Mean mean value:{} std value: {}'.format(mean_mean_values, mean_std_values))
-        self.noise = -80 #mean_mean_values
-        self.std_noise = 6 #mean_std_values
+        self.noise = -80  # mean_mean_values
+        self.std_noise = 6  # mean_std_values
         # r = requests.get("https://dramco.be/api/lora/lora_packets.php")
         # rssi = {}
         # snr = {}
@@ -149,12 +148,13 @@ class SNRModel:
         #     # plt.show()
 
         # noise floor according to https://www.semtech.com/uploads/documents/an1200.22.pdf
-        self.noise_floor = -174 + 10 *np.log10(125e3)
+        self.noise_floor = -174 + 10 * np.log10(125e3)
 
     def rss_to_snr(self, rss: float):
         # TODO make a better noise assumptionS
 
         return rss - self.noise_floor
+
 
 def roundup(x, GRID_SIZE):
     x = np.divide(x, GRID_SIZE)

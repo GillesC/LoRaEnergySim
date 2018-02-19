@@ -49,8 +49,8 @@ for num_nodes in range(1, 1000, 100):
         lora_param = LoRaParameters(freq=np.random.choice(LoRaParameters.DEFAULT_CHANNELS),
                                     sf=np.random.choice(LoRaParameters.SPREADING_FACTORS),
                                     bw=125, cr=5, crc_enabled=1, de_enabled=0, header_implicit_mode=0, tp=14)
-        node = Node(node_id, energy_profile, lora_param, 1000 * 60, process_time=5, adr=True, location=location,
-                    base_station=gateway, env=env, payload_size=50, air_interface=air_interface)
+        node = Node(node_id, energy_profile, lora_param, 1000 * 60*60, process_time=5, adr=True, location=location,
+                    base_station=gateway, env=env, payload_size=12, air_interface=air_interface)
         nodes.append(node)
         env.process(node.run())
         # plt.scatter(location.x, location.y, color='blue')
