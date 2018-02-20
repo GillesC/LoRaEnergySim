@@ -24,6 +24,7 @@ def time_on_air(payload_size: int, lora_param: LoRaParameters):
 class UplinkMessage:
     def __init__(self, node, start_on_air, payload_size, collided=False,
                  is_confirmed_message=True):
+        self. is_confirmed_message=is_confirmed_message
         self.node = node
         self.start_on_air = start_on_air
         self.lora_param = node.lora_param
@@ -35,7 +36,6 @@ class UplinkMessage:
         self.snr = None
         self.on_air = None
         self._time_on_air = None
-        self.is_confirmed_message = is_confirmed_message
         self.ack_retries_cnt = 0
         if self.is_confirmed_message:
             self.downlink_message = None

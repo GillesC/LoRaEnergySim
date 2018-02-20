@@ -62,12 +62,8 @@ class Gateway:
         In addition, the gateway determines the best suitable DL Rx window.
         """
 
-        #TODO recheck
-
         if from_node.id not in self.packet_history:
             self.packet_history[from_node.id] = deque(maxlen=20)
-
-
 
         if packet.rss < self.SENSITIVITY[packet.lora_param.sf] or packet.snr < required_snr(packet.lora_param.dr):
             # the packet received is to weak
@@ -80,7 +76,8 @@ class Gateway:
 
         self.packet_history[from_node.id].append(packet.snr)
 
-        downlink_msg.adr_param = self.adr(packet)
+        if from_node.adr:
+            downlink_msg.adr_param = self.adr(packet)
 
         # first compute if DC can be done for RX1 and RX2
         possible_rx1, time_on_air_rx1 = self.check_duty_cycle(12, packet.lora_param.sf, packet.lora_param.freq,
@@ -213,3 +210,10 @@ class Gateway:
             print('Ratio Weak/Received is {0:.2f}%'.format(weak_ratio * 100))
 
         print('Bytes received at gateway {0:.2f}'.format(self.bytes_received))
+
+    def get_der(self, nodes):
+        packets_sent = 0
+        for node in nodes:
+            packets_sent += node.packets_sent
+
+        return self.num_of_packet_received / packets_sent

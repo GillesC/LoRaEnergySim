@@ -480,6 +480,12 @@ class Node:
     def energy_per_bit(self) -> float:
         return self.total_energy_consumed() / (self.packets_sent * self.payload_size * 8)
 
+    def transmit_related_energy_per_bit(self) -> float:
+        return self.transmit_related_energy_consumed() / (self.packets_sent * self.payload_size * 8)
+
+    def transmit_related_energy_consumed(self) -> float:
+        return self.energy_tracking[NodeState(NodeState.TX).name] + self.energy_tracking[NodeState(NodeState.RX).name]
+
     def total_energy_consumed(self) -> float:
         total_energy = 0
         for key, value in self.energy_tracking.items():
