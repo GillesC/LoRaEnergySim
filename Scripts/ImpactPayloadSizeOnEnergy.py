@@ -38,7 +38,7 @@ mean_der = dict()
 num_collided_per_node = dict()
 num_no_down_per_node = dict()
 num_retrans_per_node = dict()
-payload_sizes = range(1, 50,10)
+payload_sizes = range(1, 50)
 for payload_size in payload_sizes:
 
     mean_energy_per_bit_list[payload_size] = 0
@@ -65,7 +65,7 @@ for payload_size in payload_sizes:
             node = Node(node_id, energy_profile, lora_param, payload_size * 8 / transmission_rate, process_time=5,
                         adr=adr,
                         location=location,
-                        base_station=gateway, env=env, payload_size=payload_size, air_interface=air_interface)
+                        base_station=gateway, env=env, payload_size=payload_size, air_interface=air_interface, confirmed_messages=confirmed_messages)
             nodes.append(node)
             env.process(node.run())
 
@@ -106,17 +106,29 @@ print('{} nodes in network'.format(num_nodes))
 print('{} transmission rate'.format(transmission_rate))
 print('{} ADR'.format(adr))
 print('{} confirmed msgs'.format(confirmed_messages))
-print('{} nodes in network'.format(cell_size))
+print('{}m cell size'.format(cell_size))
+
+
 plt.subplot(6, 1, 1)
 plt.plot(payload_sizes, list(mean_energy_per_bit_list.values()))
+plt.xscale('log', basex=2)
 plt.subplot(6, 1, 2)
 plt.plot(payload_sizes, list(mean_der.values()))
+plt.xscale('log', basex=2)
 plt.subplot(6, 1, 3)
 plt.plot(payload_sizes, np.divide(list(mean_energy_per_bit_list.values()), list(mean_der.values())))
+plt.xscale('log', basex=2)
 plt.subplot(6, 1, 4)
 plt.plot(payload_sizes, list(num_no_down_per_node.values()))
+plt.xscale('log', basex=2)
 plt.subplot(6, 1, 5)
 plt.plot(payload_sizes, list(num_collided_per_node.values()))
+plt.xscale('log', basex=2)
 plt.subplot(6, 1, 6)
 plt.plot(payload_sizes, list(num_retrans_per_node.values()))
-plt.show()
+plt.xscale('log', basex=2)
+#plt.show()
+
+
+plt.savefig('example.pdf')
+plt.savefig('example.pgf')

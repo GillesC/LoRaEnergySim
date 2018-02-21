@@ -70,7 +70,7 @@ for num_nodes in range(10, 1000, 100):
     for node in nodes:
         # node.log()
         measurements = air_interface.get_prop_measurements(node.id)
-        # node.plot(measurements)
+        node.plot(measurements)
         mean_energy_per_bit += node.energy_per_bit()
         mean_unique_packets_sent += node.num_unique_packets_sent
         mean_packets_sent += node.packets_sent

@@ -31,7 +31,7 @@ class NodeState(Enum):
 
 class Node:
     def __init__(self, node_id, energy_profile: EnergyProfile, lora_parameters, sleep_time, process_time, adr, location,
-                 base_station: Gateway, env, payload_size, air_interface):
+                 base_station: Gateway, env, payload_size, air_interface, confirmed_messages=True):
 
         self.num_tx_state_changes = 0
         self.num_no_downlink = 0
@@ -78,6 +78,8 @@ class Node:
         self.time_off = dict()
         for ch in LoRaParameters.CHANNELS:
             self.time_off[ch] = 0
+
+        self.confirmed_messages = confirmed_messages
 
     def plot(self, prop_measurements):
         plt.figure()
@@ -141,7 +143,7 @@ class Node:
             if Config.PRINT_ENABLED:
                 print('{}: SENDING packet'.format(self.id))
 
-            packet = UplinkMessage(self, self.env.now, self.payload_size)
+            packet = UplinkMessage(node=self, start_on_air=self.env.now, payload_size=self.payload_size, confirmed_message=self.confirmed_messages)
             downlink_message = yield self.env.process(self.send(packet))
             if downlink_message is None:
                 self.num_no_downlink += 1
@@ -249,17 +251,18 @@ class Node:
             yield self.env.process(self.dl_message_lost())
 
         if downlink_message.adr_param is not None:
-            if int(self.lora_param.dr) != int(downlink_message.adr_param['dr']):
-                if Config.PRINT_ENABLED:
-                    print('\t\t Change DR {} to {}'.format(self.lora_param.dr, downlink_message.adr_param['dr']))
-                self.lora_param.change_dr_to(downlink_message.adr_param['dr'])
-                changed = True
-            # change tp based on downlink_message['tp']
-            if int(self.lora_param.tp) != int(downlink_message.adr_param['tp']):
-                if Config.PRINT_ENABLED:
-                    print('\t\t Change TP {} to {}'.format(self.lora_param.tp, downlink_message.adr_param['tp']))
-                self.lora_param.change_tp_to(downlink_message.adr_param['tp'])
-                changed = True
+            if self.adr:
+                if int(self.lora_param.dr) != int(downlink_message.adr_param['dr']):
+                    if Config.PRINT_ENABLED:
+                        print('\t\t Change DR {} to {}'.format(self.lora_param.dr, downlink_message.adr_param['dr']))
+                    self.lora_param.change_dr_to(downlink_message.adr_param['dr'])
+                    changed = True
+                # change tp based on downlink_message['tp']
+                if int(self.lora_param.tp) != int(downlink_message.adr_param['tp']):
+                    if Config.PRINT_ENABLED:
+                        print('\t\t Change TP {} to {}'.format(self.lora_param.tp, downlink_message.adr_param['tp']))
+                    self.lora_param.change_tp_to(downlink_message.adr_param['tp'])
+                    changed = True
 
         if changed:
             lora_param_str = str(self.lora_param)
