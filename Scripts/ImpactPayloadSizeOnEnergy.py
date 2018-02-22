@@ -21,9 +21,9 @@ def plot_time(_env):
         yield _env.timeout(np.round(Config.SIMULATION_TIME / 10))
 
 
-transmission_rate = 1e-6  # number of bytes sent per ms
+transmission_rate = 1e-6  # number of bits sent per ms
 num_nodes = 100
-cell_size = 1000
+cell_size = 000
 adr = True
 confirmed_messages = True
 
@@ -38,7 +38,9 @@ mean_der = dict()
 num_collided_per_node = dict()
 num_no_down_per_node = dict()
 num_retrans_per_node = dict()
-payload_sizes = range(1, 50)
+payload_sizes = range(1, 60,10)
+
+
 for payload_size in payload_sizes:
 
     mean_energy_per_bit_list[payload_size] = 0
@@ -85,11 +87,10 @@ for payload_size in payload_sizes:
             num_retrans += node.num_retransmission
             num_no_down += node.num_no_downlink
 
-        num_collided_per_node[payload_size] = num_collided / num_nodes
-        num_no_down_per_node[payload_size] = num_no_down / num_nodes
-        num_retrans_per_node[payload_size] = num_retrans / num_nodes
+        num_collided_per_node[payload_size] += num_collided / num_nodes
+        num_no_down_per_node[payload_size] += num_no_down / num_nodes
+        num_retrans_per_node[payload_size] += num_retrans / num_nodes
 
-        mean_energy_per_bit_list[payload_size] += mean_energy_per_bit / num_nodes
         mean_energy_per_bit_list[payload_size] += mean_energy_per_bit / num_nodes
 
         der = gateway.get_der(nodes)

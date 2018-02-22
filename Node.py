@@ -34,6 +34,7 @@ class Node:
                  base_station: Gateway, env, payload_size, air_interface, confirmed_messages=True):
 
         self.num_tx_state_changes = 0
+        self.total_wait_time_because_dc = 0
         self.num_no_downlink = 0
         self.num_unique_packets_sent = 0
         self.start_device_active = 0
@@ -205,13 +206,18 @@ class Node:
     def send(self, packet):
 
         self.packet_to_sent = packet
-        channel = packet.lora_param.freq
         airtime = packet.my_time_on_air()
+
+        # check channel with lowest wait time
+        channel = min(self.time_off, key=self.time_off.get)
+        # update to best_channel
+        packet.lora_param.freq = channel
 
         if self.time_off[channel] > self.env.now:
             # wait for certaint time to respect duty cycle
             wait = self.time_off[channel] - self.env.now
             self.change_state(NodeState.SLEEP)
+            self.total_wait_time_because_dc += wait
             yield self.env.timeout(wait)
 
         # update time_off time
@@ -219,7 +225,7 @@ class Node:
         time_off = airtime / LoRaParameters.CHANNEL_DUTY_CYCLE[channel] - airtime
         self.time_off[channel] = self.env.now + time_off
 
-        self.bytes_sent += packet.payload_size
+
 
         #            TX             #
         # fixed energy overhead
@@ -295,6 +301,7 @@ class Node:
     def send_tx(self, packet: UplinkMessage) -> bool:
 
         self.packets_sent += 1
+        self.bytes_sent += packet.payload_size
 
         if Config.PRINT_ENABLED:
             print('{}: \t TX'.format(self.id))
@@ -485,6 +492,9 @@ class Node:
 
     def transmit_related_energy_per_bit(self) -> float:
         return self.transmit_related_energy_consumed() / (self.packets_sent * self.payload_size * 8)
+
+    def transmit_related_energy_per_unique_bit(self) -> float:
+        return self.transmit_related_energy_consumed() / (self.num_unique_packets_sent * self.payload_size * 8)
 
     def transmit_related_energy_consumed(self) -> float:
         return self.energy_tracking[NodeState(NodeState.TX).name] + self.energy_tracking[NodeState(NodeState.RX).name]

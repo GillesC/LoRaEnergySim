@@ -126,15 +126,16 @@ for num_nodes in num_of_nodes:
                 num_retrans += node.num_retransmission
                 num_no_down += node.num_no_downlink
 
-            num_collided_per_node[payload_size] = num_collided / num_nodes
-            num_no_down_per_node[payload_size] = num_no_down / num_nodes
-            num_retrans_per_node[payload_size] = num_retrans / num_nodes
+            num_collided_per_node[payload_size] += num_collided / num_nodes
+            num_no_down_per_node[payload_size] += num_no_down / num_nodes
+            num_retrans_per_node[payload_size] += num_retrans / num_nodes
 
-            mean_energy_per_bit_list[payload_size] += mean_energy_per_bit / num_nodes
             mean_energy_per_bit_list[payload_size] += mean_energy_per_bit / num_nodes
 
             der = gateway.get_der(nodes)
             mean_der[payload_size] += der
+
+        #END simulation time run
 
         mean_energy_per_bit_list[payload_size] = mean_energy_per_bit_list[payload_size] / simulation_num_of_times
         mean_der[payload_size] = mean_der[payload_size] / simulation_num_of_times
