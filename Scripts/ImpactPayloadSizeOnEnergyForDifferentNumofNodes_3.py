@@ -17,6 +17,9 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
+# The console attempts to auto-detect the width of the display area, but when that fails it defaults to 80 characters. This behavior can be overridden with:
+desired_width = 320
+pd.set_option('display.width', desired_width)
 
 transmission_rate = 0.02e-3  # 12*8 bits per hour (1 typical packet per hour)
 simulation_time = 1000 * 50 / transmission_rate
@@ -41,9 +44,13 @@ max_num_nodes = max(num_of_nodes)
 num_of_simulations = 1
 
 simultation_results = dict()
+gateway_results = dict()
+air_interface_results = dict()
 
 for num_nodes in num_of_nodes:
     simultation_results[num_nodes] = pd.DataFrame()
+    gateway_results[num_nodes] = pd.DataFrame()
+    air_interface_results[num_nodes] = pd.DataFrame()
 
 for n_sim in range(num_of_simulations):
 
@@ -85,11 +92,21 @@ for n_sim in range(num_of_simulations):
             env.run(until=simulation_time)
             print('Simulator is done for payload size {}'.format(payload_size))
 
-            data = Node.get_mean_simulation_data_frame(nodes, name=payload_size)/(num_nodes*num_of_simulations)
+            data = Node.get_mean_simulation_data_frame(nodes, name=payload_size) / (num_nodes * num_of_simulations)
             # print(data)
             simultation_results[num_nodes] = simultation_results[num_nodes].append(data)
+            data = gateway.get_simulation_data(name=payload_size) / (num_nodes*num_of_simulations)
+            gateway_results[num_nodes] = gateway_results[num_nodes].append(data)
+            data = air_interface.get_simulation_data(name=payload_size) / (num_nodes*num_of_simulations)
+            air_interface_results[num_nodes] = air_interface_results[num_nodes].append(data)
 
+        simultation_results[num_nodes]['UniqueBytes'] = simultation_results[num_nodes].UniquePackets * \
+                                                        simultation_results[num_nodes].index.values
+        simultation_results[num_nodes]['CollidedBytes'] = simultation_results[num_nodes].CollidedPackets * \
+                                                          simultation_results[num_nodes].index.values
         print(simultation_results[num_nodes])
+        print(gateway_results[num_nodes])
+        print(air_interface_results[num_nodes])
         # END loop payload_sizes
 
         # Printing experiment parameters
