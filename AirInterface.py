@@ -6,14 +6,16 @@ from Location import Location
 from Gateway import Gateway
 from LoRaPacket import UplinkMessage
 import matplotlib.pyplot as plt
+import pandas as pd
 
 from SNRModel import SNRModel
 
 
 class AirInterface:
     def __init__(self, gateway: Gateway, prop_model: PropagationModel, snr_model: SNRModel, env):
-        self.num_of_packets_collided = 0
+
         self.prop_measurements = {}
+        self.num_of_packets_collided = 0
         self.num_of_packets_send = 0
         self.gateway = gateway
         self.packages_in_air = list()
@@ -225,3 +227,6 @@ class AirInterface:
 
     def get_prop_measurements(self, node_id):
         return self.prop_measurements[node_id]
+
+    def get_simulation_data(self) -> pd.Series:
+        return pd.Series([self.num_of_packets_collided, self.num_of_packets_send], index=['NumberOfPacketsCollided','NumberOfPacketsOnAir'])

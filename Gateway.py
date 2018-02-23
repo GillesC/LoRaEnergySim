@@ -5,6 +5,7 @@ import numpy as np
 from LoRaPacket import UplinkMessage, DownlinkMetaMessage, DownlinkMessage
 from Global import Config
 from LoRaParameters import LoRaParameters
+import pandas as pd
 
 
 # sensititity : https://www.semtech.com/uploads/documents/sx1272.pdf
@@ -122,6 +123,7 @@ class Gateway:
         return downlink_msg
 
     def check_duty_cycle(self, payload_size, sf, freq, now):
+        # TODO with new formula
         import LoRaPacket
         time_on_air = LoRaPacket.time_on_air(payload_size, lora_param=LoRaParameters(freq, sf, 125, 5, 1, 0, 1))
         if self.channel_time_used[freq] == 0:
@@ -217,3 +219,11 @@ class Gateway:
             packets_sent += node.packets_sent
 
         return self.num_of_packet_received / packets_sent
+
+    def get_simulation_data(self) -> pd.Series:
+        return pd.Series({
+            'BytesReceived': self.bytes_received,
+            'DLPacketsLost': len(self.downlink_packets_lost),
+            'ULWeakPackets': len(self.uplink_packet_weak),
+            'PacketsReceived': self.num_of_packet_received
+        })

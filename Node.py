@@ -14,6 +14,7 @@ from LoRaParameters import LoRaParameters
 from copy import deepcopy
 
 from Location import Location
+import pandas as pd
 
 
 class NodeState(Enum):
@@ -125,7 +126,7 @@ class Node:
         if Config.PRINT_ENABLED:
             print('{} ms delayed prior to joining'.format(random_wait))
             print('{} joining the network'.format(self.id))
-            #TODO ERROR!!!!! self.process
+            # TODO ERROR!!!!! self.process
             self.join(self.env)
         if Config.PRINT_ENABLED:
             print('{}: joined the network'.format(self.id))
@@ -144,7 +145,8 @@ class Node:
             if Config.PRINT_ENABLED:
                 print('{}: SENDING packet'.format(self.id))
 
-            packet = UplinkMessage(node=self, start_on_air=self.env.now, payload_size=self.payload_size, confirmed_message=self.confirmed_messages)
+            packet = UplinkMessage(node=self, start_on_air=self.env.now, payload_size=self.payload_size,
+                                   confirmed_message=self.confirmed_messages)
             downlink_message = yield self.env.process(self.send(packet))
             if downlink_message is None:
                 self.num_no_downlink += 1
@@ -224,8 +226,6 @@ class Node:
         # https://github.com/things4u/things4u.github.io/blob/master/DeveloperGuide/LoRa%20documents/LoRaWAN%20Specification%201R0.pdf
         time_off = airtime / LoRaParameters.CHANNEL_DUTY_CYCLE[channel] - airtime
         self.time_off[channel] = self.env.now + time_off
-
-
 
         #            TX             #
         # fixed energy overhead
@@ -342,7 +342,8 @@ class Node:
         yield env.process(self.send_rx_ack(1, packet, rx_on_rx1))
         rx_1_rx_time = self.env.now - begin
 
-        sleep_between_rx1_rx2_window = LoRaParameters.RX_WINDOW_2_DELAY - (LoRaParameters.RX_WINDOW_1_DELAY + rx_1_rx_time)
+        sleep_between_rx1_rx2_window = LoRaParameters.RX_WINDOW_2_DELAY - (
+            LoRaParameters.RX_WINDOW_1_DELAY + rx_1_rx_time)
         if sleep_between_rx1_rx2_window > 0:
             self.change_state(NodeState.SLEEP)
             yield env.timeout(sleep_between_rx1_rx2_window)
@@ -445,7 +446,7 @@ class Node:
                 time_duration_sleep_s = (self.env.now - self.sleep_start_time) / 1000
                 power_consumed_in_state_mW = self.energy_profile.sleep_power_mW
                 energy_consumed_in_state_mJ = power_consumed_in_state_mW * time_duration_sleep_s
-                #first track otherwise the next state will overwrite this
+                # first track otherwise the next state will overwrite this
                 self.track_power(power_consumed_in_state_mW)
                 self.track_energy(NodeState.SLEEP, energy_consumed_in_state_mJ)
             if new_state == NodeState.RADIO_TX_PREP_TIME_MS:
@@ -456,7 +457,7 @@ class Node:
             elif new_state == NodeState.TX:
                 power_consumed_in_state_mW = self.energy_profile.tx_power_mW[packet.lora_param.tp]
                 energy_consumed_in_state_mJ = power_consumed_in_state_mW * (packet.my_time_on_air() / 1000)
-                self.num_tx_state_changes +=1
+                self.num_tx_state_changes += 1
             elif new_state == NodeState.RADIO_PRE_RX:
                 power_consumed_in_state_mW = self.energy_profile.rx_power['pre_mW']
                 energy_consumed_in_state_mJ = self.energy_profile.rx_power['pre_mW'] * self.energy_profile.rx_power[
@@ -469,7 +470,7 @@ class Node:
                 track_node_state = NodeState.RX
                 power_consumed_in_state_mW = self.energy_profile.rx_power['post_mW']
                 energy_consumed_in_state_mJ = self.energy_profile.rx_power['post_mW'] * (self.energy_profile.rx_power[
-                    'post_ms'] / 1000)
+                                                                                             'post_ms'] / 1000)
             elif new_state == NodeState.SLEEP:
                 # only set sleep start time
                 # this is handled when a state is changed
@@ -517,3 +518,32 @@ class Node:
     def track_state_change(self, new_state):
         self.state_changes['time'].append(self.env.now)
         self.state_changes['val'].append(new_state)
+
+    def get_simulation_data(self) -> pd.Series:
+        return pd.Series({
+            'WaitTimeDC': self.total_wait_time_because_dc/1000, # [s] instead of [ms]
+            'NoDLReceived': self.num_no_downlink,
+            'UniquePackets': self.num_unique_packets_sent,
+            'TotalPackets': self.packets_sent,
+            'CollidedPackets': self.num_collided,
+            'RetransmittedPackets': self.num_retransmission,
+            'TotalBytes': self.bytes_sent,
+            'TotalEnergy': self.total_energy_consumed(),
+            'TxRxEnergy': self.transmit_related_energy_consumed()
+        })
+
+    @staticmethod
+    def get_simulation_data_frame(nodes: list) -> pd.DataFrame:
+        column_names = ['WaitTimeDC', 'NoDLReceived', 'UniquePackets', 'TotalPackets', 'CollidedPackets',
+                        'RetransmittedPackets', 'TotalBytes', 'TotalEnergy', 'TxRxEnergy']
+        pdf = pd.DataFrame(columns=column_names)
+        list_of_series = []
+        for node in nodes:
+            list_of_series.append(node.get_simulation_data())
+        return pdf.append(list_of_series)
+
+    @staticmethod
+    def get_mean_simulation_data_frame(nodes: list, name) -> pd.DataFrame:
+        data = Node.get_simulation_data_frame(nodes).sum(axis=0)
+        data.name = name
+        return pd.DataFrame(data).transpose()
