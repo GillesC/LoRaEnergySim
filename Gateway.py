@@ -37,13 +37,11 @@ class Gateway:
         self.bytes_received = 0
         self.location = location
         self.packet_history = dict()
-        self.channel_time_used = dict()
+        self.time_off = dict()
         for channel in LoRaParameters.CHANNELS:
-            self.channel_time_used[channel] = 0
-        self.downlink_packets_lost = []
+            self.time_off[channel] = 0
+        self.dl_not_schedulable = 0
         self.uplink_packet_weak = []
-        for freq in LoRaParameters.DEFAULT_CHANNELS:
-            self.channel_time_used[freq] = 0
         self.num_of_packet_received = 0
 
         self.env = env
@@ -81,59 +79,60 @@ class Gateway:
             downlink_msg.adr_param = self.adr(packet)
 
         # first compute if DC can be done for RX1 and RX2
-        possible_rx1, time_on_air_rx1 = self.check_duty_cycle(12, packet.lora_param.sf, packet.lora_param.freq,
-                                                              now)
-        possible_rx2, time_on_air_rx2 = self.check_duty_cycle(12, LoRaParameters.RX_2_DEFAULT_SF,
-                                                              LoRaParameters.RX_2_DEFAULT_FREQ, now)
+        possible_rx1, time_on_air_rx1, off_time_rx1 = self.check_duty_cycle(12, packet.lora_param.sf,
+                                                                        packet.lora_param.freq,
+                                                                        now)
+        possible_rx2, time_on_air_rx2, off_time_rx2 = self.check_duty_cycle(12, LoRaParameters.RX_2_DEFAULT_SF,
+                                                                        LoRaParameters.RX_2_DEFAULT_FREQ, now)
 
         tx_on_rx1 = False
 
         lost = False
 
-        if packet.lora_param.dr > 3:
-            # we would like sending on the same channel with the same DR
-            if not possible_rx1:
-                if not possible_rx2:
-                    self.downlink_packets_lost.append(packet)
-                    lost = True
-                else:
-                    tx_on_rx1 = False
-            else:
-                tx_on_rx1 = True
+        if not possible_rx1 and not possible_rx2:
+            lost = True
+            self.dl_not_schedulable += 1
         else:
-            # we would like sending it on RX2 (less robust) but sending with 27dBm
-            if not possible_rx2:
+            if packet.lora_param.dr > 3:
+                # we would like sending on the same channel with the same DR
                 if not possible_rx1:
-                    self.downlink_packets_lost.append(packet)
-                    lost = True
+                    if possible_rx2:
+                        tx_on_rx1 = False
                 else:
                     tx_on_rx1 = True
             else:
-                tx_on_rx1 = False
-
-        downlink_meta_msg.scheduled_receive_slot = DownlinkMetaMessage.RX_SLOT_1 if tx_on_rx1 else DownlinkMetaMessage.RX_SLOT_2
+                # we would like sending it on RX2 (less robust) but sending with 27dBm
+                if not possible_rx2:
+                    if possible_rx1:
+                        tx_on_rx1 = True
+                else:
+                    tx_on_rx1 = False
 
         if not lost:
+            downlink_meta_msg.scheduled_receive_slot = DownlinkMetaMessage.RX_SLOT_1 if tx_on_rx1 else DownlinkMetaMessage.RX_SLOT_2
             if tx_on_rx1:
-                self.channel_time_used[packet.lora_param.freq] += time_on_air_rx1
+                time_off_for_channel = packet.lora_param.freq
+                time_off = off_time_rx1
             else:
-                self.channel_time_used[LoRaParameters.RX_2_DEFAULT_FREQ] += time_on_air_rx2
-                self.channel_time_used[LoRaParameters.RX_2_DEFAULT_FREQ] += time_on_air_rx2
-
+                time_off_for_channel = LoRaParameters.RX_2_DEFAULT_FREQ
+                time_off = off_time_rx2
+            self.time_off[time_off_for_channel] = self.env.now + time_off
+        else:
+            downlink_meta_msg.dc_limit_reached = True
         return downlink_msg
 
-    def check_duty_cycle(self, payload_size, sf, freq, now):
-        # TODO with new formula
+    def check_duty_cycle(self, payload_size, sf, freq, now) -> (bool, float, float):
         import LoRaPacket
         time_on_air = LoRaPacket.time_on_air(payload_size, lora_param=LoRaParameters(freq, sf, 125, 5, 1, 0, 1))
-        if self.channel_time_used[freq] == 0:
-            return True, time_on_air
+        # it is not possible to schedule a message now on this channel for this message
+        if self.time_off[freq] > self.env.now:
+            return False, time_on_air, -1
 
-        on_time = self.channel_time_used[freq]
-
-        # off time per channel not total off time
-        new_duty_cycle = ((on_time + time_on_air) / (now + time_on_air)) * 100  # on / total time =(on+off)
-        return new_duty_cycle <= LoRaParameters.CHANNEL_DUTY_CYCLE_PROC[freq], time_on_air
+        # update time_off time
+        # https://github.com/things4u/things4u.github.io/blob/master/DeveloperGuide/LoRa%20documents/LoRaWAN%20Specification%201R0.pdf
+        time_off = time_on_air / LoRaParameters.CHANNEL_DUTY_CYCLE[freq] - time_on_air
+        off_time = self.env.now + time_off
+        return True, time_on_air, off_time
 
     def adr(self, packet: UplinkMessage):
         history = self.packet_history[packet.node.id]
@@ -198,15 +197,7 @@ class Gateway:
     def log(self):
         print('\n\t\t GATEWAY')
         print('Received {} packets'.format(self.num_of_packet_received))
-        print('Lost {} downlink packets'.format(len(self.downlink_packets_lost)))
-        if len(self.downlink_packets_lost) != 0 and self.num_of_packet_received != 0:
-            lost_ratio = len(self.downlink_packets_lost) / self.num_of_packet_received
-            print('Ratio Lost/Received is {0:.2f}%'.format(lost_ratio * 100))
-
-        for channel in self.channel_time_used:
-            time_on_ratio = self.channel_time_used[channel] / self.env.now
-            print('CH{0} spent on air {1:.2f}%'.format(channel, time_on_ratio * 100))
-
+        print('Lost {} downlink packets'.format(self.dl_not_schedulable))
         if len(self.uplink_packet_weak) != 0 and self.num_of_packet_received != 0:
             weak_ratio = len(self.uplink_packet_weak) / self.num_of_packet_received
             print('Ratio Weak/Received is {0:.2f}%'.format(weak_ratio * 100))
@@ -220,10 +211,12 @@ class Gateway:
 
         return self.num_of_packet_received / packets_sent
 
-    def get_simulation_data(self) -> pd.Series:
-        return pd.Series({
+    def get_simulation_data(self, name) -> pd.Series:
+        series = pd.Series({
             'BytesReceived': self.bytes_received,
-            'DLPacketsLost': len(self.downlink_packets_lost),
+            'DLPacketsLost': self.dl_not_schedulable,
             'ULWeakPackets': len(self.uplink_packet_weak),
             'PacketsReceived': self.num_of_packet_received
         })
+        series.name = name
+        return series.transpose()
