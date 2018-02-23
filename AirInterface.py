@@ -228,5 +228,7 @@ class AirInterface:
     def get_prop_measurements(self, node_id):
         return self.prop_measurements[node_id]
 
-    def get_simulation_data(self) -> pd.Series:
-        return pd.Series([self.num_of_packets_collided, self.num_of_packets_send], index=['NumberOfPacketsCollided','NumberOfPacketsOnAir'])
+    def get_simulation_data(self, name) -> pd.Series:
+        series = pd.Series([self.num_of_packets_collided, self.num_of_packets_send], index=['NumberOfPacketsCollided','NumberOfPacketsOnAir'])
+        series.name = name
+        return series.transpose()

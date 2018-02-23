@@ -149,7 +149,7 @@ class Node:
                                    confirmed_message=self.confirmed_messages)
             downlink_message = yield self.env.process(self.send(packet))
             if downlink_message is None:
-                self.num_no_downlink += 1
+                # message is collided and not received at the BS
                 yield self.env.process(self.dl_message_lost())
             else:
                 yield self.env.process(self.process_downlink_message(downlink_message, packet))
@@ -343,7 +343,7 @@ class Node:
         rx_1_rx_time = self.env.now - begin
 
         sleep_between_rx1_rx2_window = LoRaParameters.RX_WINDOW_2_DELAY - (
-            LoRaParameters.RX_WINDOW_1_DELAY + rx_1_rx_time)
+                LoRaParameters.RX_WINDOW_1_DELAY + rx_1_rx_time)
         if sleep_between_rx1_rx2_window > 0:
             self.change_state(NodeState.SLEEP)
             yield env.timeout(sleep_between_rx1_rx2_window)
@@ -405,6 +405,7 @@ class Node:
         yield self.env.timeout(self.process_time)
 
     def dl_message_lost(self):
+        self.num_no_downlink += 1
         packet = self.packet_to_sent
         if packet.is_confirmed_message:
             if packet.ack_retries_cnt < LoRaParameters.MAX_ACK_RETRIES:
@@ -420,7 +421,6 @@ class Node:
                 self.num_retransmission += 1
 
                 if downlink_message is None:
-                    self.num_no_downlink += 1
                     yield self.env.process(self.dl_message_lost())
                 else:
                     yield self.env.process(self.process_downlink_message(downlink_message, packet))
@@ -451,7 +451,7 @@ class Node:
                 self.track_energy(NodeState.SLEEP, energy_consumed_in_state_mJ)
             if new_state == NodeState.RADIO_TX_PREP_TIME_MS:
                 power_consumed_in_state_mW = LoRaParameters.RADIO_TX_PREP_ENERGY_MJ / (
-                    LoRaParameters.RADIO_TX_PREP_TIME_MS / 1000)
+                        LoRaParameters.RADIO_TX_PREP_TIME_MS / 1000)
                 energy_consumed_in_state_mJ = LoRaParameters.RADIO_TX_PREP_ENERGY_MJ
                 track_node_state = NodeState.TX
             elif new_state == NodeState.TX:
@@ -521,7 +521,7 @@ class Node:
 
     def get_simulation_data(self) -> pd.Series:
         return pd.Series({
-            'WaitTimeDC': self.total_wait_time_because_dc/1000, # [s] instead of [ms]
+            'WaitTimeDC': self.total_wait_time_because_dc / 1000,  # [s] instead of [ms]
             'NoDLReceived': self.num_no_downlink,
             'UniquePackets': self.num_unique_packets_sent,
             'TotalPackets': self.packets_sent,
