@@ -79,10 +79,10 @@ class Gateway:
             downlink_msg.adr_param = self.adr(packet)
 
         # first compute if DC can be done for RX1 and RX2
-        possible_rx1, time_on_air_rx1, off_time_rx1 = self.check_duty_cycle(12, packet.lora_param.sf,
+        possible_rx1, time_on_air_rx1, off_time_till_rx1 = self.check_duty_cycle(12, packet.lora_param.sf,
                                                                         packet.lora_param.freq,
                                                                         now)
-        possible_rx2, time_on_air_rx2, off_time_rx2 = self.check_duty_cycle(12, LoRaParameters.RX_2_DEFAULT_SF,
+        possible_rx2, time_on_air_rx2, off_time_till_rx2 = self.check_duty_cycle(12, LoRaParameters.RX_2_DEFAULT_SF,
                                                                         LoRaParameters.RX_2_DEFAULT_FREQ, now)
 
         tx_on_rx1 = False
@@ -112,11 +112,11 @@ class Gateway:
             downlink_meta_msg.scheduled_receive_slot = DownlinkMetaMessage.RX_SLOT_1 if tx_on_rx1 else DownlinkMetaMessage.RX_SLOT_2
             if tx_on_rx1:
                 time_off_for_channel = packet.lora_param.freq
-                time_off = off_time_rx1
+                time_off_till = off_time_till_rx1
             else:
                 time_off_for_channel = LoRaParameters.RX_2_DEFAULT_FREQ
-                time_off = off_time_rx2
-            self.time_off[time_off_for_channel] = self.env.now + time_off
+                time_off_till = off_time_till_rx2
+            self.time_off[time_off_for_channel] = time_off_till
         else:
             downlink_meta_msg.dc_limit_reached = True
         return downlink_msg
@@ -131,8 +131,8 @@ class Gateway:
         # update time_off time
         # https://github.com/things4u/things4u.github.io/blob/master/DeveloperGuide/LoRa%20documents/LoRaWAN%20Specification%201R0.pdf
         time_off = time_on_air / LoRaParameters.CHANNEL_DUTY_CYCLE[freq] - time_on_air
-        off_time = self.env.now + time_off
-        return True, time_on_air, off_time
+        off_time_till = self.env.now + time_off
+        return True, time_on_air, off_time_till
 
     def adr(self, packet: UplinkMessage):
         history = self.packet_history[packet.node.id]
