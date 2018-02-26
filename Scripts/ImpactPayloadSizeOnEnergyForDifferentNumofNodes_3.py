@@ -17,7 +17,8 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-# The console attempts to auto-detect the width of the display area, but when that fails it defaults to 80 characters. This behavior can be overridden with:
+# The console attempts to auto-detect the width of the display area, but when that fails it defaults to 80
+# characters. This behavior can be overridden with:
 desired_width = 320
 pd.set_option('display.width', desired_width)
 
@@ -39,9 +40,9 @@ middle = np.round(Config.CELL_SIZE / 2)
 gateway_location = Location(x=middle, y=middle, indoor=False)
 
 payload_sizes = range(5, 55, 5)
-num_of_nodes = [100]  # [100, 500, 1000, 2000, 5000, 10000]
+num_of_nodes = [100, 500, 1000, 2000, 5000]
 max_num_nodes = max(num_of_nodes)
-num_of_simulations = 1
+num_of_simulations = 10
 
 simultation_results = dict()
 gateway_results = dict()
@@ -92,21 +93,27 @@ for n_sim in range(num_of_simulations):
             env.run(until=simulation_time)
             print('Simulator is done for payload size {}'.format(payload_size))
 
-            data = Node.get_mean_simulation_data_frame(nodes, name=payload_size) / (num_nodes * num_of_simulations)
+            data_node = Node.get_mean_simulation_data_frame(nodes, name=payload_size) / (num_nodes * num_of_simulations)
+            data_gateway = gateway.get_simulation_data(name=payload_size) / (num_nodes * num_of_simulations)
+            data_air_interface = air_interface.get_simulation_data(name=payload_size) / (num_nodes * num_of_simulations)
+
             # print(data)
-            simultation_results[num_nodes] = simultation_results[num_nodes].append(data)
-            data = gateway.get_simulation_data(name=payload_size) / (num_nodes*num_of_simulations)
-            gateway_results[num_nodes] = gateway_results[num_nodes].append(data)
-            data = air_interface.get_simulation_data(name=payload_size) / (num_nodes*num_of_simulations)
-            air_interface_results[num_nodes] = air_interface_results[num_nodes].append(data)
+            if not payload_size in simultation_results[num_nodes].index:
+                simultation_results[num_nodes] = simultation_results[num_nodes].append(data_node)
+                gateway_results[num_nodes] = gateway_results[num_nodes].append(data_gateway)
+                air_interface_results[num_nodes] = air_interface_results[num_nodes].append(data_air_interface)
+
+            else:
+                simultation_results[num_nodes].loc[[payload_size]] += data_node
+                gateway_results[num_nodes].loc[[payload_size]] += data_gateway
+                air_interface_results[num_nodes].loc[[payload_size]] += data_air_interface
 
         simultation_results[num_nodes]['UniqueBytes'] = simultation_results[num_nodes].UniquePackets * \
                                                         simultation_results[num_nodes].index.values
         simultation_results[num_nodes]['CollidedBytes'] = simultation_results[num_nodes].CollidedPackets * \
                                                           simultation_results[num_nodes].index.values
-        print(simultation_results[num_nodes])
-        print(gateway_results[num_nodes])
-        print(air_interface_results[num_nodes])
+
+
         # END loop payload_sizes
 
         # Printing experiment parameters
@@ -116,14 +123,23 @@ for n_sim in range(num_of_simulations):
         print('{} confirmed msgs'.format(confirmed_messages))
         print('{}m cell size'.format(cell_size))
 
-# END loop num_of_nodes
+    # END loop num_of_nodes
+# END LOOP SIMULATION
+
+for num_nodes in num_of_nodes:
+    simultation_results[num_nodes].to_pickle('simulation_results_node_{}'.format(num_nodes))
+    print(simultation_results[num_nodes])
+    gateway_results[num_nodes].to_pickle('gateway_results_{}'.format(num_nodes))
+    print(gateway_results[num_nodes])
+    air_interface_results[num_nodes].to_pickle('air_interface_results_{}'.format(num_nodes))
+    print(air_interface_results[num_nodes])
 
 
 sns.set_style("ticks")
 # set width of bar
 barWidth = 0.25
 
-CollidedPackets = simultation_results[num_of_nodes[0]].CollidedPackets
+CollidedPackets = simultation_results[num_of_nodes[0]].CollidedBytes
 RetransmittedPackets = simultation_results[num_of_nodes[0]].RetransmittedPackets
 NoDLReceived = simultation_results[num_of_nodes[0]].NoDLReceived
 
@@ -133,7 +149,7 @@ r2 = [x + barWidth for x in r1]
 r3 = [x + barWidth for x in r2]
 
 # Make the plot
-plt.bar(r1, CollidedPackets, color='#7f6d5f', width=barWidth, edgecolor='white', label='var1')
+plt.bar(r1, CollidedPackets, color='#7f6d5f', width=barWidth, edgecolor='white', label='Collided')
 plt.bar(r2, RetransmittedPackets, color='#557f2d', width=barWidth, edgecolor='white', label='var2')
 plt.bar(r3, NoDLReceived, color='#2d7f5e', width=barWidth, edgecolor='white', label='var3')
 
