@@ -257,6 +257,13 @@ class Node:
             yield self.env.process(self.dl_message_lost())
 
         if downlink_message.adr_param is not None:
+            # if you do not have a confirmed message you can only process
+            # the ADR after the gateway has received 20 new packets
+            if not uplink_message.is_confirmed_message:
+                # only process ADR message each 20 packet
+                # as explained here: https://www.thethingsnetwork.org/forum/t/adr-is-not-working-nucleo-raspberry-italy/10078/3?u=gillesc
+                if self.packets_sent % 20 != 0:
+                    return
             if self.adr:
                 if int(self.lora_param.dr) != int(downlink_message.adr_param['dr']):
                     if Config.PRINT_ENABLED:
