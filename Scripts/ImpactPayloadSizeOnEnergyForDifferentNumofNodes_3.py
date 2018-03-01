@@ -42,7 +42,7 @@ gateway_location = Location(x=middle, y=middle, indoor=False)
 payload_sizes = range(5, 55, 5)
 num_of_nodes = [100]  # [100, 500, 1000, 2000, 5000]
 max_num_nodes = max(num_of_nodes)
-num_of_simulations = 2
+num_of_simulations = 1000
 
 simultation_results = dict()
 gateway_results = dict()
@@ -137,8 +137,8 @@ for n_sim in range(num_of_simulations):
 # END LOOP SIMULATION
 
 for num_nodes in num_of_nodes:
-    simultation_results[num_nodes]['mean_energy_per_byte'] = mu_energy[num_nodes]
-    simultation_results[num_nodes]['sigma_energy_per_byte'] = sigma_energy[num_nodes]
+    simultation_results[num_nodes]['mean_energy_per_byte'] = list(mu_energy[num_nodes].values())
+    simultation_results[num_nodes]['sigma_energy_per_byte'] = list(sigma_energy[num_nodes].values())
     simultation_results[num_nodes]['UniqueBytes'] = simultation_results[num_nodes].UniquePackets * \
                                                     simultation_results[num_nodes].index.values
     simultation_results[num_nodes]['CollidedBytes'] = simultation_results[num_nodes].CollidedPackets * \

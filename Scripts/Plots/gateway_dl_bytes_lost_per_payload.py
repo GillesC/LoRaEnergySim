@@ -12,6 +12,7 @@ nodes_df = pd.read_pickle('../Measurements/simulation_results_node_100')
 print(nodes_df)
 print(gateway_df)
 energy_per_byte = nodes_df.TxRxEnergy / (gateway_df.UniquePacketsReceived * payload_sizes)
+print(energy_per_byte)
 retransmitted_bytes = nodes_df.RetransmittedPackets * payload_sizes
 wait_time = nodes_df.WaitTimeDC
 der = gateway_df.UniquePacketsReceived / nodes_df.UniquePackets
@@ -23,8 +24,7 @@ color = [(31 / 255, 119 / 255, 180 / 255), (158 / 255, 218 / 255, 229 / 255), (1
          (199 / 255, 199 / 255, 199 / 255), (247 / 255, 182 / 255, 210 / 255)]
 left_ax.set_xlabel('payload size [B]')
 
-left_ax.errorbar(payload_sizes, energy_per_byte, yerror=nodes_df.sigma_energy_per_byte, marker='o', linestyle='--', lw=1, color=color[0], markersize=10,
-             label='Energy Per Successful Byte [B]')
+left_ax.errorbar(x=payload_sizes, y=energy_per_byte, yerr=nodes_df.sigma_energy_per_byte, marker='o', linestyle='--', lw=1, color=color[0], markersize=10)
 left_ax.set_ylabel('Energy per Byte [mJ/B]')
 
 right_ax.plot(payload_sizes, bytes_lost / max(bytes_lost), marker='o', linestyle='--', lw=1, color=color[1],
