@@ -4,11 +4,11 @@ import seaborn as sns
 
 sns.set_style("white")
 
-gateway_df = pd.read_pickle('../Measurements/gateway_results_no_adr_no_conf_100')
+gateway_df = pd.read_pickle('../Measurements/gateway_results_100')
 payload_sizes = gateway_df.index.values
 bytes_lost = gateway_df.DLPacketsLost * payload_sizes
 
-nodes_df = pd.read_pickle('../Measurements/simulation_results_node_no_adr_no_conf_100')
+nodes_df = pd.read_pickle('../Measurements/simulation_results_node_100')
 print(nodes_df)
 print(gateway_df)
 energy_per_byte = nodes_df.TxRxEnergy / (gateway_df.UniquePacketsReceived * payload_sizes)
@@ -23,7 +23,7 @@ color = [(31 / 255, 119 / 255, 180 / 255), (158 / 255, 218 / 255, 229 / 255), (1
          (199 / 255, 199 / 255, 199 / 255), (247 / 255, 182 / 255, 210 / 255)]
 left_ax.set_xlabel('payload size [B]')
 
-left_ax.plot(payload_sizes, energy_per_byte, marker='o', linestyle='--', lw=1, color=color[0], markersize=10,
+left_ax.errorbar(payload_sizes, energy_per_byte, yerror=nodes_df.sigma_energy_per_byte, marker='o', linestyle='--', lw=1, color=color[0], markersize=10,
              label='Energy Per Successful Byte [B]')
 left_ax.set_ylabel('Energy per Byte [mJ/B]')
 
