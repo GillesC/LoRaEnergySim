@@ -40,9 +40,9 @@ middle = np.round(Config.CELL_SIZE / 2)
 gateway_location = Location(x=middle, y=middle, indoor=False)
 
 payload_sizes = range(5, 55, 5)
-num_of_nodes = [100] #[100, 500, 1000, 2000, 5000]
+num_of_nodes = [100]  # [100, 500, 1000, 2000, 5000]
 max_num_nodes = max(num_of_nodes)
-num_of_simulations = 10
+num_of_simulations = 2
 
 simultation_results = dict()
 gateway_results = dict()
@@ -119,17 +119,9 @@ for n_sim in range(num_of_simulations):
                 air_interface_results[num_nodes].loc[[payload_size]] += data_air_interface
 
             mu, sigma = Node.get_energy_per_byte_stats(nodes, gateway)
-            print("mu: {}, sigma: {}".format(mu,sigma))
-            mu_energy[num_nodes][payload_size] += mu/num_of_simulations
-            sigma_energy[num_nodes][payload_size] += sigma/num_of_simulations
-
-        if 'mean_energy_per_byte' not in simultation_results[num_nodes].columns:
-            simultation_results[num_nodes]['mean_energy_per_byte'] = mu_energy[num_nodes][payload_size]
-            simultation_results[num_nodes]['sigma_energy_per_byte'] = sigma_energy[num_nodes][payload_size]
-        else:
-            simultation_results[num_nodes]['mean_energy_per_byte'] += mu_energy[num_nodes][payload_size]
-            simultation_results[num_nodes]['sigma_energy_per_byte'] += sigma_energy[num_nodes][payload_size]
-
+            print("mu: {}, sigma: {}".format(mu, sigma))
+            mu_energy[num_nodes][payload_size] += mu / num_of_simulations
+            sigma_energy[num_nodes][payload_size] += sigma / num_of_simulations
 
         # END loop payload_sizes
 
@@ -140,10 +132,13 @@ for n_sim in range(num_of_simulations):
         print('{} confirmed msgs'.format(confirmed_messages))
         print('{}m cell size'.format(cell_size))
 
-    # END loop num_of_nodes
+        # END loop num_of_nodes
+
 # END LOOP SIMULATION
 
 for num_nodes in num_of_nodes:
+    simultation_results[num_nodes]['mean_energy_per_byte'] = mu_energy[num_nodes]
+    simultation_results[num_nodes]['sigma_energy_per_byte'] = sigma_energy[num_nodes]
     simultation_results[num_nodes]['UniqueBytes'] = simultation_results[num_nodes].UniquePackets * \
                                                     simultation_results[num_nodes].index.values
     simultation_results[num_nodes]['CollidedBytes'] = simultation_results[num_nodes].CollidedPackets * \
@@ -155,7 +150,6 @@ for num_nodes in num_of_nodes:
     print(gateway_results[num_nodes])
     air_interface_results[num_nodes].to_pickle('air_interface_results_{}'.format(num_nodes))
     print(air_interface_results[num_nodes])
-
 
 sns.set_style("ticks")
 # set width of bar
