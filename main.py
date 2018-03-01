@@ -1,20 +1,18 @@
 import datetime
 
-import matplotlib
 import matplotlib.pyplot as plt
-
-from AirInterface import AirInterface
-from Global import Config
-from Location import Location
-from Node import Node
-from EnergyProfile import EnergyProfile
-from LoRaParameters import LoRaParameters
-from Gateway import Gateway
-from SNRModel import SNRModel
-import PropagationModel
+import numpy as np
 import simpy
 
-import numpy as np
+import PropagationModel
+from AirInterface import AirInterface
+from EnergyProfile import EnergyProfile
+from Gateway import Gateway
+from Global import Config
+from LoRaParameters import LoRaParameters
+from Location import Location
+from Node import Node
+from SNRModel import SNRModel
 
 
 def plot_time(_env):

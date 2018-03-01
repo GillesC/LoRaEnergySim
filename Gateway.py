@@ -37,13 +37,15 @@ class Gateway:
         self.bytes_received = 0
         self.location = location
         self.packet_history = dict()
+        self.packet_num_received_from = dict()
+        self.distinct_packets_received = 0
+        self.last_distinct_packets_received_from = dict()
         self.time_off = dict()
         for channel in LoRaParameters.CHANNELS:
             self.time_off[channel] = 0
         self.dl_not_schedulable = 0
         self.uplink_packet_weak = []
         self.num_of_packet_received = 0
-
         self.env = env
 
         self.prop_measurements = {}
@@ -63,6 +65,13 @@ class Gateway:
 
         if from_node.id not in self.packet_history:
             self.packet_history[from_node.id] = deque(maxlen=20)
+            self.last_distinct_packets_received_from[from_node.id] = -1
+            self.packet_num_received_from[from_node.id] = 0
+
+        # everytime a distinct message is received (i.e. id is diff from previous message
+        if self.last_distinct_packets_received_from[from_node.id] != packet.id:
+            self.distinct_packets_received += 1
+        self.last_distinct_packets_received_from[from_node.id] = packet.id
 
         if packet.rss < self.SENSITIVITY[packet.lora_param.sf] or packet.snr < required_snr(packet.lora_param.dr):
             # the packet received is to weak
@@ -80,19 +89,28 @@ class Gateway:
 
         # first compute if DC can be done for RX1 and RX2
         possible_rx1, time_on_air_rx1, off_time_till_rx1 = self.check_duty_cycle(12, packet.lora_param.sf,
-                                                                        packet.lora_param.freq,
-                                                                        now)
+                                                                                 packet.lora_param.freq,
+                                                                                 now)
         possible_rx2, time_on_air_rx2, off_time_till_rx2 = self.check_duty_cycle(12, LoRaParameters.RX_2_DEFAULT_SF,
-                                                                        LoRaParameters.RX_2_DEFAULT_FREQ, now)
+                                                                                 LoRaParameters.RX_2_DEFAULT_FREQ,
+                                                                                 now)
+
+        if not packet.is_confirmed_message:
+            # only schedule DL message if number of received msgs is > 20, i.e. every 20
+            schedule_dl = False
+            if self.packet_num_received_from[from_node.id] % 20 == 0:
+                schedule_dl = True
+                self.packet_num_received_from[from_node.id] = 0  # count again
+        else:
+            schedule_dl = True
 
         tx_on_rx1 = False
-
         lost = False
 
-        if not possible_rx1 and not possible_rx2:
+        if schedule_dl and not possible_rx1 and not possible_rx2:
             lost = True
             self.dl_not_schedulable += 1
-        else:
+        elif schedule_dl:
             if packet.lora_param.dr > 3:
                 # we would like sending on the same channel with the same DR
                 if not possible_rx1:
@@ -109,14 +127,15 @@ class Gateway:
                     tx_on_rx1 = False
 
         if not lost:
-            downlink_meta_msg.scheduled_receive_slot = DownlinkMetaMessage.RX_SLOT_1 if tx_on_rx1 else DownlinkMetaMessage.RX_SLOT_2
-            if tx_on_rx1:
-                time_off_for_channel = packet.lora_param.freq
-                time_off_till = off_time_till_rx1
-            else:
-                time_off_for_channel = LoRaParameters.RX_2_DEFAULT_FREQ
-                time_off_till = off_time_till_rx2
-            self.time_off[time_off_for_channel] = time_off_till
+            if schedule_dl:
+                downlink_meta_msg.scheduled_receive_slot = DownlinkMetaMessage.RX_SLOT_1 if tx_on_rx1 else DownlinkMetaMessage.RX_SLOT_2
+                if tx_on_rx1:
+                    time_off_for_channel = packet.lora_param.freq
+                    time_off_till = off_time_till_rx1
+                else:
+                    time_off_for_channel = LoRaParameters.RX_2_DEFAULT_FREQ
+                    time_off_till = off_time_till_rx2
+                self.time_off[time_off_for_channel] = time_off_till
         else:
             downlink_meta_msg.dc_limit_reached = True
         return downlink_msg
@@ -216,7 +235,8 @@ class Gateway:
             'BytesReceived': self.bytes_received,
             'DLPacketsLost': self.dl_not_schedulable,
             'ULWeakPackets': len(self.uplink_packet_weak),
-            'PacketsReceived': self.num_of_packet_received
+            'PacketsReceived': self.num_of_packet_received,
+            'UniquePacketsReceived': self.distinct_packets_received
         })
         series.name = name
         return series.transpose()

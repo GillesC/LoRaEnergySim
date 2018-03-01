@@ -83,6 +83,8 @@ class Node:
 
         self.confirmed_messages = confirmed_messages
 
+        self.unique_packet_id = 0
+
     def plot(self, prop_measurements):
         plt.figure()
         # plt.scatter(self.sleep_energy_time, self.sleep_energy_value, label='Sleep Power (mW)')
@@ -145,8 +147,9 @@ class Node:
             if Config.PRINT_ENABLED:
                 print('{}: SENDING packet'.format(self.id))
 
+            self.unique_packet_id += 1
             packet = UplinkMessage(node=self, start_on_air=self.env.now, payload_size=self.payload_size,
-                                   confirmed_message=self.confirmed_messages)
+                                   confirmed_message=self.confirmed_messages, id=self.unique_packet_id)
             downlink_message = yield self.env.process(self.send(packet))
             if downlink_message is None:
                 # message is collided and not received at the BS
@@ -256,26 +259,18 @@ class Node:
             self.lost_packages_time.append(self.env.now)
             yield self.env.process(self.dl_message_lost())
 
-        if downlink_message.adr_param is not None:
-            # if you do not have a confirmed message you can only process
-            # the ADR after the gateway has received 20 new packets
-            if not uplink_message.is_confirmed_message:
-                # only process ADR message each 20 packet
-                # as explained here: https://www.thethingsnetwork.org/forum/t/adr-is-not-working-nucleo-raspberry-italy/10078/3?u=gillesc
-                if self.packets_sent % 20 != 0:
-                    return
-            if self.adr:
-                if int(self.lora_param.dr) != int(downlink_message.adr_param['dr']):
-                    if Config.PRINT_ENABLED:
-                        print('\t\t Change DR {} to {}'.format(self.lora_param.dr, downlink_message.adr_param['dr']))
-                    self.lora_param.change_dr_to(downlink_message.adr_param['dr'])
-                    changed = True
-                # change tp based on downlink_message['tp']
-                if int(self.lora_param.tp) != int(downlink_message.adr_param['tp']):
-                    if Config.PRINT_ENABLED:
-                        print('\t\t Change TP {} to {}'.format(self.lora_param.tp, downlink_message.adr_param['tp']))
-                    self.lora_param.change_tp_to(downlink_message.adr_param['tp'])
-                    changed = True
+        if downlink_message.adr_param is not None and self.adr:
+            if int(self.lora_param.dr) != int(downlink_message.adr_param['dr']):
+                if Config.PRINT_ENABLED:
+                    print('\t\t Change DR {} to {}'.format(self.lora_param.dr, downlink_message.adr_param['dr']))
+                self.lora_param.change_dr_to(downlink_message.adr_param['dr'])
+                changed = True
+            # change tp based on downlink_message['tp']
+            if int(self.lora_param.tp) != int(downlink_message.adr_param['tp']):
+                if Config.PRINT_ENABLED:
+                    print('\t\t Change TP {} to {}'.format(self.lora_param.tp, downlink_message.adr_param['tp']))
+                self.lora_param.change_tp_to(downlink_message.adr_param['tp'])
+                changed = True
 
         if changed:
             lora_param_str = str(self.lora_param)
@@ -422,6 +417,8 @@ class Node:
                     self.lora_param.change_dr_to(dr)
                     packet.lora_param = self.lora_param
 
+                # set packet as retransmitted packet
+                packet.unique = False
                 downlink_message = yield self.env.process(self.send(packet))
 
                 # after yield to be sure a transmission was sent
