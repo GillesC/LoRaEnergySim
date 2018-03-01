@@ -40,7 +40,7 @@ middle = np.round(Config.CELL_SIZE / 2)
 gateway_location = Location(x=middle, y=middle, indoor=False)
 
 payload_sizes = range(5, 55, 5)
-num_of_nodes = [100, 500, 1000, 2000, 5000]
+num_of_nodes = [100] #[100, 500, 1000, 2000, 5000]
 max_num_nodes = max(num_of_nodes)
 num_of_simulations = 10
 
@@ -52,6 +52,15 @@ for num_nodes in num_of_nodes:
     simultation_results[num_nodes] = pd.DataFrame()
     gateway_results[num_nodes] = pd.DataFrame()
     air_interface_results[num_nodes] = pd.DataFrame()
+
+mu_energy = dict()
+sigma_energy = dict()
+for num_nodes in num_of_nodes:
+    mu_energy[num_nodes] = dict()
+    sigma_energy[num_nodes] = dict()
+    for payload_size in payload_sizes:
+        mu_energy[num_nodes][payload_size] = 0
+        sigma_energy[num_nodes][payload_size] = 0
 
 for n_sim in range(num_of_simulations):
 
@@ -94,6 +103,7 @@ for n_sim in range(num_of_simulations):
             print('Simulator is done for payload size {}'.format(payload_size))
 
             data_node = Node.get_mean_simulation_data_frame(nodes, name=payload_size) / (num_nodes * num_of_simulations)
+
             data_gateway = gateway.get_simulation_data(name=payload_size) / (num_nodes * num_of_simulations)
             data_air_interface = air_interface.get_simulation_data(name=payload_size) / (num_nodes * num_of_simulations)
 
@@ -108,10 +118,17 @@ for n_sim in range(num_of_simulations):
                 gateway_results[num_nodes].loc[[payload_size]] += data_gateway
                 air_interface_results[num_nodes].loc[[payload_size]] += data_air_interface
 
-        simultation_results[num_nodes]['UniqueBytes'] = simultation_results[num_nodes].UniquePackets * \
-                                                        simultation_results[num_nodes].index.values
-        simultation_results[num_nodes]['CollidedBytes'] = simultation_results[num_nodes].CollidedPackets * \
-                                                          simultation_results[num_nodes].index.values
+            mu, sigma = Node.get_energy_per_byte_stats(nodes, gateway)
+            print("mu: {}, sigma: {}".format(mu,sigma))
+            mu_energy[num_nodes][payload_size] += mu/num_of_simulations
+            sigma_energy[num_nodes][payload_size] += sigma/num_of_simulations
+
+        if 'mean_energy_per_byte' not in simultation_results[num_nodes].columns:
+            simultation_results[num_nodes]['mean_energy_per_byte'] = mu_energy[num_nodes][payload_size]
+            simultation_results[num_nodes]['sigma_energy_per_byte'] = sigma_energy[num_nodes][payload_size]
+        else:
+            simultation_results[num_nodes]['mean_energy_per_byte'] += mu_energy[num_nodes][payload_size]
+            simultation_results[num_nodes]['sigma_energy_per_byte'] += sigma_energy[num_nodes][payload_size]
 
 
         # END loop payload_sizes
@@ -127,6 +144,11 @@ for n_sim in range(num_of_simulations):
 # END LOOP SIMULATION
 
 for num_nodes in num_of_nodes:
+    simultation_results[num_nodes]['UniqueBytes'] = simultation_results[num_nodes].UniquePackets * \
+                                                    simultation_results[num_nodes].index.values
+    simultation_results[num_nodes]['CollidedBytes'] = simultation_results[num_nodes].CollidedPackets * \
+                                                      simultation_results[num_nodes].index.values
+
     simultation_results[num_nodes].to_pickle('simulation_results_node_{}'.format(num_nodes))
     print(simultation_results[num_nodes])
     gateway_results[num_nodes].to_pickle('gateway_results_{}'.format(num_nodes))

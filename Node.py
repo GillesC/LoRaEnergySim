@@ -551,3 +551,14 @@ class Node:
         data = Node.get_simulation_data_frame(nodes).sum(axis=0)
         data.name = name
         return pd.DataFrame(data).transpose()
+
+    @staticmethod
+    def get_energy_per_byte_stats(nodes: list, gateway: Gateway) -> (float, float):
+        unique_bytes = gateway.distinct_bytes_received_from
+        en_list = np.zeros(len(nodes))
+        i= 0
+        for node in nodes:
+            en_list[i] = node.transmit_related_energy_consumed() / unique_bytes[node.id]
+            i+=1
+
+        return np.mean(en_list), np.std(en_list)

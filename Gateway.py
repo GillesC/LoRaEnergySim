@@ -39,6 +39,7 @@ class Gateway:
         self.packet_history = dict()
         self.packet_num_received_from = dict()
         self.distinct_packets_received = 0
+        self.distinct_bytes_received_from = dict()
         self.last_distinct_packets_received_from = dict()
         self.time_off = dict()
         for channel in LoRaParameters.CHANNELS:
@@ -67,10 +68,12 @@ class Gateway:
             self.packet_history[from_node.id] = deque(maxlen=20)
             self.last_distinct_packets_received_from[from_node.id] = -1
             self.packet_num_received_from[from_node.id] = 0
+            self.distinct_bytes_received_from[from_node.id] = 0
 
         # everytime a distinct message is received (i.e. id is diff from previous message
         if self.last_distinct_packets_received_from[from_node.id] != packet.id:
             self.distinct_packets_received += 1
+            self.distinct_bytes_received_from[from_node.id] += packet.payload_size
         self.last_distinct_packets_received_from[from_node.id] = packet.id
 
         if packet.rss < self.SENSITIVITY[packet.lora_param.sf] or packet.snr < required_snr(packet.lora_param.dr):
