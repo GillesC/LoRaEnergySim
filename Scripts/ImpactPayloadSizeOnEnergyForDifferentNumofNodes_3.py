@@ -1,6 +1,7 @@
 import datetime
 
 import numpy as np
+import pandas as pd
 import simpy
 
 import PropagationModel
@@ -13,10 +14,6 @@ from Location import Location
 from Node import Node
 from SNRModel import SNRModel
 
-import pandas as pd
-import seaborn as sns
-import matplotlib.pyplot as plt
-
 # The console attempts to auto-detect the width of the display area, but when that fails it defaults to 80
 # characters. This behavior can be overridden with:
 desired_width = 320
@@ -26,7 +23,7 @@ transmission_rate = 0.02e-3  # 12*8 bits per hour (1 typical packet per hour)
 simulation_time = 1000 * 50 / transmission_rate
 cell_size = 1000
 adr = True
-confirmed_messages = True
+confirmed_messages = False
 
 
 def plot_time(_env):
@@ -144,31 +141,10 @@ for num_nodes in num_of_nodes:
     simultation_results[num_nodes]['CollidedBytes'] = simultation_results[num_nodes].CollidedPackets * \
                                                       simultation_results[num_nodes].index.values
 
-    simultation_results[num_nodes].to_pickle('simulation_results_node_{}'.format(num_nodes))
+    simultation_results[num_nodes].to_pickle('../Measurements/adr_no_conf/180305/simulation_results_node_{}'.format(num_nodes))
     print(simultation_results[num_nodes])
-    gateway_results[num_nodes].to_pickle('gateway_results_{}'.format(num_nodes))
+    gateway_results[num_nodes].to_pickle('../Measurements/adr_no_conf/180305/gateway_results_{}'.format(num_nodes))
     print(gateway_results[num_nodes])
-    air_interface_results[num_nodes].to_pickle('air_interface_results_{}'.format(num_nodes))
+    air_interface_results[num_nodes].to_pickle('../Measurements/adr_no_conf/180305/air_interface_results_{}'.format(num_nodes))
     print(air_interface_results[num_nodes])
 
-sns.set_style("ticks")
-# set width of bar
-barWidth = 0.25
-
-CollidedPackets = simultation_results[num_of_nodes[0]].CollidedBytes
-RetransmittedPackets = simultation_results[num_of_nodes[0]].RetransmittedPackets
-NoDLReceived = simultation_results[num_of_nodes[0]].NoDLReceived
-
-# Set position of bar on X axis
-r1 = np.arange(len(CollidedPackets))
-r2 = [x + barWidth for x in r1]
-r3 = [x + barWidth for x in r2]
-
-# Make the plot
-plt.bar(r1, CollidedPackets, color='#7f6d5f', width=barWidth, edgecolor='white', label='Collided')
-plt.bar(r2, RetransmittedPackets, color='#557f2d', width=barWidth, edgecolor='white', label='var2')
-plt.bar(r3, NoDLReceived, color='#2d7f5e', width=barWidth, edgecolor='white', label='var3')
-
-# Create legend & Show graphic
-plt.legend()
-plt.show()

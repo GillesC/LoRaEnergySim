@@ -555,10 +555,9 @@ class Node:
     @staticmethod
     def get_energy_per_byte_stats(nodes: list, gateway: Gateway) -> (float, float):
         unique_bytes = gateway.distinct_bytes_received_from
-        en_list = np.zeros(len(nodes))
-        i= 0
+        en_list = []
         for node in nodes:
-            en_list[i] = node.transmit_related_energy_consumed() / unique_bytes[node.id]
-            i+=1
-
+            if node.id in unique_bytes:
+                en_list.append(node.transmit_related_energy_consumed() / unique_bytes[node.id])
+        en_list = np.array(en_list)
         return np.mean(en_list), np.std(en_list)

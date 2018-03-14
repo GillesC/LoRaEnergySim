@@ -16,6 +16,8 @@ class LogShadow:
         if indoor:
             bpl = np.random.choice([17, 27, 21, 30])  # according Rep. ITU-R P.2346-0
         Lpl = 10 * self.gamma * np.log10(d / self.d0) + np.random.normal(self.Lpld0, self.std) + bpl
+        if Lpl <0:
+            Lpl = 0
         return tp_dBm - self.GL - Lpl
 
 
