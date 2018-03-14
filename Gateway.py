@@ -33,7 +33,7 @@ class Gateway:
     SENSITIVITY = {6: -121, 7: -124, 8: -127, 9: -130, 10: -133, 11: -135, 12: -137}
     ADR_MARGIN_DB = 10  # dB
 
-    def __init__(self, env, location):
+    def __init__(self, env, location, fast_adr_on=False, max_snr_adr=True, min_snr_adr=False, avg_snr_adr=False):
         self.bytes_received = 0
         self.location = location
         self.packet_history = dict()
@@ -48,6 +48,11 @@ class Gateway:
         self.uplink_packet_weak = []
         self.num_of_packet_received = 0
         self.env = env
+
+        self.fast_adr_on = fast_adr_on
+        self.max_snr_adr = max_snr_adr
+        self.min_snr_adr = min_snr_adr
+        self.avg_snr_adr = avg_snr_adr
 
         self.prop_measurements = {}
 
@@ -158,9 +163,16 @@ class Gateway:
 
     def adr(self, packet: UplinkMessage):
         history = self.packet_history[packet.node.id]
-        if len(history) is 20:
+
+        if len(history) is 20 or self.FAST_ADR_EN:
             # Execute adr else do nothing
-            max_snr = np.amax(np.asanyarray(history))
+
+            if self.MAX_SNR_ADR:
+                snr_history_val = np.amax(np.asanyarray(history))
+            elif self.MIN_SNR_ADR:
+                snr_history_val = np.amin(np.asanyarray(history))
+            elif self.AVG_SNR_ADR:
+                snr_history_val = np.average(np.asanyarray(history))
 
             if packet.lora_param.sf == 7:
                 adr_required_snr = -7.5
@@ -177,7 +189,7 @@ class Gateway:
             else:
                 ValueError('SF {} not supported'.format(packet.lora_param.sf))
 
-            snr_margin = max_snr - adr_required_snr - self.ADR_MARGIN_DB
+            snr_margin = snr_history_val - adr_required_snr - self.ADR_MARGIN_DB
 
             num_steps = np.round(snr_margin / 3)
             # If NStep > 0 the data rate can be increased and/or power reduced.
