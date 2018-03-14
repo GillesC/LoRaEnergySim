@@ -64,6 +64,7 @@ class Node:
         self.sleep_time = sleep_time
 
         self.change_lora_param = dict()
+        self.energy_value = 0
 
         self.lost_packages_time = []
 
@@ -305,6 +306,8 @@ class Node:
         self.packets_sent += 1
         self.bytes_sent += packet.payload_size
 
+        self.energy_value += packet.lora_param.tp + (5 - packet.lora_param.dr)
+
         if Config.PRINT_ENABLED:
             print('{}: \t TX'.format(self.id))
 
@@ -345,7 +348,7 @@ class Node:
         rx_1_rx_time = self.env.now - begin
 
         sleep_between_rx1_rx2_window = LoRaParameters.RX_WINDOW_2_DELAY - (
-                LoRaParameters.RX_WINDOW_1_DELAY + rx_1_rx_time)
+            LoRaParameters.RX_WINDOW_1_DELAY + rx_1_rx_time)
         if sleep_between_rx1_rx2_window > 0:
             self.change_state(NodeState.SLEEP)
             yield env.timeout(sleep_between_rx1_rx2_window)
@@ -455,7 +458,7 @@ class Node:
                 self.track_energy(NodeState.SLEEP, energy_consumed_in_state_mJ)
             if new_state == NodeState.RADIO_TX_PREP_TIME_MS:
                 power_consumed_in_state_mW = LoRaParameters.RADIO_TX_PREP_ENERGY_MJ / (
-                        LoRaParameters.RADIO_TX_PREP_TIME_MS / 1000)
+                    LoRaParameters.RADIO_TX_PREP_TIME_MS / 1000)
                 energy_consumed_in_state_mJ = LoRaParameters.RADIO_TX_PREP_ENERGY_MJ
                 track_node_state = NodeState.TX
             elif new_state == NodeState.TX:
@@ -524,7 +527,7 @@ class Node:
         self.state_changes['val'].append(new_state)
 
     def get_simulation_data(self) -> pd.Series:
-        return pd.Series({
+        series = {
             'WaitTimeDC': self.total_wait_time_because_dc / 1000,  # [s] instead of [ms]
             'NoDLReceived': self.num_no_downlink,
             'UniquePackets': self.num_unique_packets_sent,
@@ -533,13 +536,15 @@ class Node:
             'RetransmittedPackets': self.num_retransmission,
             'TotalBytes': self.bytes_sent,
             'TotalEnergy': self.total_energy_consumed(),
-            'TxRxEnergy': self.transmit_related_energy_consumed()
-        })
+            'TxRxEnergy': self.transmit_related_energy_consumed(),
+            'EnergyValuePackets': self.energy_value
+        }
+        return pd.Series(series)
 
     @staticmethod
     def get_simulation_data_frame(nodes: list) -> pd.DataFrame:
         column_names = ['WaitTimeDC', 'NoDLReceived', 'UniquePackets', 'TotalPackets', 'CollidedPackets',
-                        'RetransmittedPackets', 'TotalBytes', 'TotalEnergy', 'TxRxEnergy']
+                        'RetransmittedPackets', 'TotalBytes', 'TotalEnergy', 'TxRxEnergy', 'EnergyValuePackets']
         pdf = pd.DataFrame(columns=column_names)
         list_of_series = []
         for node in nodes:
