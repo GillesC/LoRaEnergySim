@@ -8,7 +8,6 @@ from LoRaParameters import LoRaParameters
 import pandas as pd
 
 
-# sensititity : https://www.semtech.com/uploads/documents/sx1272.pdf
 def required_snr(dr):
     req_snr = 0
     if dr == 5:
@@ -30,7 +29,7 @@ def required_snr(dr):
 
 
 class Gateway:
-    SENSITIVITY = {6: -121, 7: -124, 8: -127, 9: -130, 10: -133, 11: -135, 12: -137}
+    SENSITIVITY = {6: -121, 7: -126.5, 8: -129, 9: -131.5, 10: -134, 11: -136.5, 12: -139.5}
     ADR_MARGIN_DB = 10  # dB
 
     def __init__(self, env, location, fast_adr_on=False, max_snr_adr=True, min_snr_adr=False, avg_snr_adr=False):
@@ -75,11 +74,7 @@ class Gateway:
             self.packet_num_received_from[from_node.id] = 0
             self.distinct_bytes_received_from[from_node.id] = 0
 
-        # everytime a distinct message is received (i.e. id is diff from previous message
-        if self.last_distinct_packets_received_from[from_node.id] != packet.id:
-            self.distinct_packets_received += 1
-            self.distinct_bytes_received_from[from_node.id] += packet.payload_size
-        self.last_distinct_packets_received_from[from_node.id] = packet.id
+
 
         if packet.rss < self.SENSITIVITY[packet.lora_param.sf] or packet.snr < required_snr(packet.lora_param.dr):
             # the packet received is to weak
@@ -89,6 +84,12 @@ class Gateway:
 
         self.bytes_received += packet.payload_size
         self.num_of_packet_received += 1
+
+        # everytime a distinct message is received (i.e. id is diff from previous message
+        if self.last_distinct_packets_received_from[from_node.id] != packet.id:
+            self.distinct_packets_received += 1
+            self.distinct_bytes_received_from[from_node.id] += packet.payload_size
+        self.last_distinct_packets_received_from[from_node.id] = packet.id
 
         self.packet_history[from_node.id].append(packet.snr)
 
