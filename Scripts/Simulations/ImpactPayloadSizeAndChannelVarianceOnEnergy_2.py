@@ -24,8 +24,8 @@ pd.set_option('display.width', desired_width)
 transmission_rate = 0.02e-3  # 12*8 bits per hour (1 typical packet per hour)
 simulation_time = 1000 * 50 / transmission_rate
 cell_size = 1000
-adr = True
-confirmed_messages = True
+adr = False
+confirmed_messages = False
 
 
 def plot_time(_env):
@@ -140,7 +140,7 @@ for n_sim in range(num_of_simulations):
 
 # END LOOP SIMULATION
 
-directory = './Measurements/ChannelVariance/2sim/'
+directory = './Measurements/ChannelVariance/2sim/no_adr_no_conf'
 if not os.path.exists(directory):
     os.makedirs(directory)
 
