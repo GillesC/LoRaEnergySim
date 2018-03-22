@@ -22,10 +22,10 @@ desired_width = 320
 pd.set_option('display.width', desired_width)
 
 transmission_rate = 0.02e-3  # 12*8 bits per hour (1 typical packet per hour)
-simulation_time = 365 * 24 * 60 * 60 * 1000
+simulation_time = 30 * 24 * 60 * 60 * 1000
 cell_size = 1000
-adr = True
-confirmed_messages = True
+adr = False
+confirmed_messages = False
 
 
 def plot_time(_env):
@@ -150,9 +150,9 @@ for num_nodes in num_of_nodes:
     simultation_results[num_nodes]['CollidedBytes'] = simultation_results[num_nodes].CollidedPackets * \
                                                       simultation_results[num_nodes].index.values
 
-    simultation_results[num_nodes].to_pickle(directory + '/adr_conf_simulation_results_node_{}'.format(num_nodes))
+    simultation_results[num_nodes].to_pickle(directory + '/no_adr_no_conf_simulation_results_node_{}'.format(num_nodes))
     print(simultation_results[num_nodes])
-    gateway_results[num_nodes].to_pickle(directory + '/adr_conf_gateway_results_{}'.format(num_nodes))
+    gateway_results[num_nodes].to_pickle(directory + '/no_adr_no_conf_gateway_results_{}'.format(num_nodes))
     print(gateway_results[num_nodes])
-    air_interface_results[num_nodes].to_pickle(directory + '/adr_conf_air_interface_results_{}'.format(num_nodes))
+    air_interface_results[num_nodes].to_pickle(directory + '/no_adr_no_conf_air_interface_results_{}'.format(num_nodes))
     print(air_interface_results[num_nodes])
