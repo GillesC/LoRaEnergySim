@@ -14,6 +14,7 @@ from Location import Location
 from Node import Node
 from SNRModel import SNRModel
 import os
+import pickle
 
 # The console attempts to auto-detect the width of the display area, but when that fails it defaults to 80
 # characters. This behavior can be overridden with:
@@ -60,12 +61,14 @@ for payload_size in payload_sizes:
         mu_energy[payload_size][path_loss_variance] = 0
         sigma_energy[payload_size][path_loss_variance] = 0
 
+# load locations:
+with open('locations.pkl', 'rb') as filehandler:
+    locations_per_simulation = pickle.load(filehandler)
+
 for n_sim in range(num_of_simulations):
     print("Staring simulation: {}".format(n_sim))
 
-    locations = list()
-    for i in range(num_nodes):
-        locations.append(Location(min=0, max=cell_size, indoor=False))
+    locations = locations_per_simulation[n_sim]
 
     for payload_size in payload_sizes:
 
