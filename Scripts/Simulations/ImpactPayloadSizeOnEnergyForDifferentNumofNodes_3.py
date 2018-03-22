@@ -24,7 +24,7 @@ pd.set_option('display.width', desired_width)
 transmission_rate = 0.02e-3  # 12*8 bits per hour (1 typical packet per hour)
 simulation_time = 30 * 24 * 60 * 60 * 1000
 cell_size = 1000
-adr = False
+adr = True
 confirmed_messages = False
 
 
@@ -75,7 +75,7 @@ for n_sim in range(num_of_simulations):
         for payload_size in payload_sizes:
 
             env = simpy.Environment()
-            gateway = Gateway(env, gateway_location)
+            gateway = Gateway(env, gateway_location, fast_adr_on=True)
             nodes = []
             air_interface = AirInterface(gateway, PropagationModel.LogShadow(), SNRModel(), env)
             np.random.shuffle(locations)
@@ -150,9 +150,9 @@ for num_nodes in num_of_nodes:
     simultation_results[num_nodes]['CollidedBytes'] = simultation_results[num_nodes].CollidedPackets * \
                                                       simultation_results[num_nodes].index.values
 
-    simultation_results[num_nodes].to_pickle(directory + '/no_adr_no_conf_simulation_results_node_{}'.format(num_nodes))
+    simultation_results[num_nodes].to_pickle(directory + '/fast_adr_no_conf_simulation_results_node_{}'.format(num_nodes))
     print(simultation_results[num_nodes])
-    gateway_results[num_nodes].to_pickle(directory + '/no_adr_no_conf_gateway_results_{}'.format(num_nodes))
+    gateway_results[num_nodes].to_pickle(directory + '/fast_adr_no_conf_gateway_results_{}'.format(num_nodes))
     print(gateway_results[num_nodes])
-    air_interface_results[num_nodes].to_pickle(directory + '/no_adr_no_conf_air_interface_results_{}'.format(num_nodes))
+    air_interface_results[num_nodes].to_pickle(directory + '/fast_adr_no_conf_air_interface_results_{}'.format(num_nodes))
     print(air_interface_results[num_nodes])
