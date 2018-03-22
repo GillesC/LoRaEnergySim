@@ -13,6 +13,7 @@ from LoRaParameters import LoRaParameters
 from Location import Location
 from Node import Node
 from SNRModel import SNRModel
+import os
 
 # The console attempts to auto-detect the width of the display area, but when that fails it defaults to 80
 # characters. This behavior can be overridden with:
@@ -37,9 +38,9 @@ middle = np.round(Config.CELL_SIZE / 2)
 gateway_location = Location(x=middle, y=middle, indoor=False)
 
 payload_sizes = range(5, 55, 5)
-path_loss_variances = range(0, 22, 2)
+path_loss_variances = [0, 1, 2, 3, 4, 5, 10, 15, 20]
 num_nodes = 100
-num_of_simulations = 10
+num_of_simulations = 2
 
 simultation_results = dict()
 gateway_results = dict()
@@ -136,6 +137,10 @@ for n_sim in range(num_of_simulations):
 
 # END LOOP SIMULATION
 
+directory = './Measurements/ChannelVariance/2sim/'
+if not os.path.exists(directory):
+    os.makedirs(directory)
+
 for payload_size in payload_sizes:
     print(payload_size)
     simultation_results[payload_size]['mean_energy_per_byte'] = list(mu_energy[payload_size].values())
@@ -144,14 +149,14 @@ for payload_size in payload_sizes:
     simultation_results[payload_size]['CollidedBytes'] = simultation_results[
                                                              payload_size].CollidedPackets * payload_size
     simultation_results[payload_size].to_pickle(
-        './Measurements/ChannelVariance/10sim/simulation_results_node_{}'.format(payload_size))
+        directory+'simulation_results_node_{}'.format(payload_size))
 
     print(simultation_results[payload_size])
     gateway_results[payload_size].to_pickle(
-        './Measurements/ChannelVariance/10sim/gateway_results_{}'.format(payload_size))
+        directory+'gateway_results_{}'.format(payload_size))
     print(gateway_results[payload_size])
     air_interface_results[payload_size].to_pickle(
-        './Measurements/ChannelVariance/10sim/air_interface_results_{}'.format(payload_size))
+        directory+'air_interface_results_{}'.format(payload_size))
     print(air_interface_results[payload_size])
 
 # for payload_size in payload_sizes:
