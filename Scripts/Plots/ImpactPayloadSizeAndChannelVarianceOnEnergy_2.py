@@ -36,10 +36,10 @@ tx_power_mW = {2: 91.8, 5: 95.9, 8: 101.6, 11: 120.8, 14: 146.5}  # measured TX 
 middle = np.round(Config.CELL_SIZE / 2)
 gateway_location = Location(x=middle, y=middle, indoor=False)
 
-payload_sizes = range(5,55,5)
-path_loss_variances = range(0,22,2)
+payload_sizes = range(5, 55, 5)
+path_loss_variances = range(0, 22, 2)
 num_nodes = 100
-num_of_simulations = 100
+num_of_simulations = 10
 
 simultation_results = dict()
 gateway_results = dict()
@@ -101,11 +101,11 @@ for n_sim in range(num_of_simulations):
             print('Simulator is done for path loss variance {}'.format(path_loss_variance))
 
             data_node = Node.get_mean_simulation_data_frame(nodes, name=path_loss_variance) / (
-                        num_nodes * num_of_simulations)
+                    num_nodes * num_of_simulations)
 
             data_gateway = gateway.get_simulation_data(name=path_loss_variance) / (num_nodes * num_of_simulations)
             data_air_interface = air_interface.get_simulation_data(name=path_loss_variance) / (
-                        num_nodes * num_of_simulations)
+                    num_nodes * num_of_simulations)
 
             # print(data)
             if not path_loss_variance in simultation_results[payload_size].index:
@@ -141,14 +141,17 @@ for payload_size in payload_sizes:
     simultation_results[payload_size]['mean_energy_per_byte'] = list(mu_energy[payload_size].values())
     simultation_results[payload_size]['sigma_energy_per_byte'] = list(sigma_energy[payload_size].values())
     simultation_results[payload_size]['UniqueBytes'] = simultation_results[payload_size].UniquePackets * payload_size
-    simultation_results[payload_size]['CollidedBytes'] = simultation_results[payload_size].CollidedPackets * payload_size
-    simultation_results[payload_size].to_pickle('./Measurements/180309/simulation_results_node_{}'.format(payload_size))
+    simultation_results[payload_size]['CollidedBytes'] = simultation_results[
+                                                             payload_size].CollidedPackets * payload_size
+    simultation_results[payload_size].to_pickle(
+        './Measurements/ChannelVariance/10sim/simulation_results_node_{}'.format(payload_size))
 
     print(simultation_results[payload_size])
-    gateway_results[payload_size].to_pickle('./Measurements/180309/gateway_results_{}'.format(payload_size))
+    gateway_results[payload_size].to_pickle(
+        './Measurements/ChannelVariance/10sim/gateway_results_{}'.format(payload_size))
     print(gateway_results[payload_size])
     air_interface_results[payload_size].to_pickle(
-        './Measurements/180309/air_interface_results_{}'.format(payload_size))
+        './Measurements/ChannelVariance/10sim/air_interface_results_{}'.format(payload_size))
     print(air_interface_results[payload_size])
 
 # for payload_size in payload_sizes:

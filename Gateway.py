@@ -165,14 +165,14 @@ class Gateway:
     def adr(self, packet: UplinkMessage):
         history = self.packet_history[packet.node.id]
 
-        if len(history) is 20 or self.FAST_ADR_EN:
+        if len(history) is 20 or self.fast_adr_on:
             # Execute adr else do nothing
 
-            if self.MAX_SNR_ADR:
+            if self.max_snr_adr:
                 snr_history_val = np.amax(np.asanyarray(history))
-            elif self.MIN_SNR_ADR:
+            elif self.min_snr_adr:
                 snr_history_val = np.amin(np.asanyarray(history))
-            elif self.AVG_SNR_ADR:
+            elif self.avg_snr_adr:
                 snr_history_val = np.average(np.asanyarray(history))
 
             if packet.lora_param.sf == 7:

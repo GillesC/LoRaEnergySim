@@ -19,10 +19,6 @@
 #
 
 import numpy as np
-import requests
-import seaborn as sns
-
-sns.set()
 
 
 class SNRModel:
