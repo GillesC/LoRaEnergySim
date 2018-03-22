@@ -14,6 +14,7 @@ from Location import Location
 from Node import Node
 from SNRModel import SNRModel
 import os
+import pickle
 
 # The console attempts to auto-detect the width of the display area, but when that fails it defaults to 80
 # characters. This behavior can be overridden with:
@@ -21,7 +22,7 @@ desired_width = 320
 pd.set_option('display.width', desired_width)
 
 transmission_rate = 0.02e-3  # 12*8 bits per hour (1 typical packet per hour)
-simulation_time = 365*24*60*60*1000
+simulation_time = 365 * 24 * 60 * 60 * 1000
 cell_size = 1000
 adr = True
 confirmed_messages = True
@@ -38,9 +39,13 @@ middle = np.round(Config.CELL_SIZE / 2)
 gateway_location = Location(x=middle, y=middle, indoor=False)
 
 payload_sizes = range(5, 55, 5)
-num_of_nodes = [100]  # [100, 500, 1000, 2000, 5000]
-max_num_nodes = max(num_of_nodes)
-num_of_simulations = 10
+
+# load locations:
+with open('locations.pkl', 'rb') as filehandler:
+    locations_per_simulation = pickle.load(filehandler)
+
+num_of_simulations = len(locations_per_simulation)
+num_of_nodes = [len(locations_per_simulation[0])]  # now only for 1 num_of_nodes
 
 simultation_results = dict()
 gateway_results = dict()
@@ -63,10 +68,7 @@ for num_nodes in num_of_nodes:
 for n_sim in range(num_of_simulations):
 
     print('Simulation #{}'.format(n_sim))
-
-    locations = list()
-    for i in range(max_num_nodes):
-        locations.append(Location(min=0, max=cell_size, indoor=False))
+    locations = locations_per_simulation[n_sim]
 
     for num_nodes in num_of_nodes:
 
@@ -136,7 +138,7 @@ for n_sim in range(num_of_simulations):
 
 # END LOOP SIMULATION
 
-directory = 'Scripts/Measurements/payload_size_energy_10_sim_100_nodes_long'
+directory = 'Scripts/Measurements/payload_size_energy_2_sim_100_nodes_long'
 if not os.path.exists(directory):
     os.makedirs(directory)
 
@@ -148,12 +150,9 @@ for num_nodes in num_of_nodes:
     simultation_results[num_nodes]['CollidedBytes'] = simultation_results[num_nodes].CollidedPackets * \
                                                       simultation_results[num_nodes].index.values
 
-
-
     simultation_results[num_nodes].to_pickle(directory + '/adr_conf_simulation_results_node_{}'.format(num_nodes))
     print(simultation_results[num_nodes])
     gateway_results[num_nodes].to_pickle(directory + '/adr_conf_gateway_results_{}'.format(num_nodes))
     print(gateway_results[num_nodes])
     air_interface_results[num_nodes].to_pickle(directory + '/adr_conf_air_interface_results_{}'.format(num_nodes))
     print(air_interface_results[num_nodes])
-
