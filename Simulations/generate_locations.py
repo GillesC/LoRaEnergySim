@@ -8,7 +8,7 @@ from Location import Location
 
 num_locations = 100
 cell_size = 1000
-num_of_simulations = 10
+num_of_simulations = 1000
 
 locations_per_simulation = list()
 for num_sim in range(num_of_simulations):

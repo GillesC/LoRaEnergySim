@@ -22,7 +22,7 @@ desired_width = 320
 pd.set_option('display.width', desired_width)
 
 transmission_rate = 0.02e-3  # 12*8 bits per hour (1 typical packet per hour)
-simulation_time = 1000 * 50 / transmission_rate
+simulation_time = 365 * 24 * 60 * 60 * 1000
 cell_size = 1000
 adr = False
 confirmed_messages = False
@@ -39,9 +39,9 @@ middle = np.round(Config.CELL_SIZE / 2)
 gateway_location = Location(x=middle, y=middle, indoor=False)
 
 payload_sizes = range(5, 55, 5)
-path_loss_variances = [0, 1, 2, 3, 4, 5, 10, 15, 20]
+path_loss_variances = [0, 5, 7.8, 15, 20]
 num_nodes = 100
-num_of_simulations = 2
+num_of_simulations = 50
 
 simultation_results = dict()
 gateway_results = dict()
@@ -140,7 +140,7 @@ for n_sim in range(num_of_simulations):
 
 # END LOOP SIMULATION
 
-directory = './Measurements/ChannelVariance/2sim/no_adr_no_conf'
+directory = './Measurements/ChannelVariance/50sim/no_adr_no_conf'
 if not os.path.exists(directory):
     os.makedirs(directory)
 
@@ -152,29 +152,12 @@ for payload_size in payload_sizes:
     simultation_results[payload_size]['CollidedBytes'] = simultation_results[
                                                              payload_size].CollidedPackets * payload_size
     simultation_results[payload_size].to_pickle(
-        directory+'simulation_results_node_{}'.format(payload_size))
+        directory + 'simulation_results_node_{}'.format(payload_size))
 
     print(simultation_results[payload_size])
     gateway_results[payload_size].to_pickle(
-        directory+'gateway_results_{}'.format(payload_size))
+        directory + 'gateway_results_{}'.format(payload_size))
     print(gateway_results[payload_size])
     air_interface_results[payload_size].to_pickle(
-        directory+'air_interface_results_{}'.format(payload_size))
+        directory + 'air_interface_results_{}'.format(payload_size))
     print(air_interface_results[payload_size])
-
-# for payload_size in payload_sizes:
-#     simultation_results[payload_size]['mean_energy_per_byte'] = list(mu_energy[payload_size].values())
-#     simultation_results[payload_size]['sigma_energy_per_byte'] = list(sigma_energy[payload_size].values())
-#     simultation_results[payload_size]['UniqueBytes'] = simultation_results[payload_size].UniquePackets * \
-#                                                        simultation_results[payload_size].index.values
-#     simultation_results[payload_size]['CollidedBytes'] = simultation_results[payload_size].CollidedPackets * \
-#                                                          simultation_results[payload_size].index.values
-#
-#     simultation_results[payload_size].to_pickle(
-#         './Measurements/180508_10/simulation_results_node_{}'.format(payload_size))
-#     # print(simultation_results[payload_size])
-#     gateway_results[payload_size].to_pickle('./Measurements/180508_10/gateway_results_{}'.format(payload_size))
-#     #print(gateway_results[payload_size])
-#     air_interface_results[payload_size].to_pickle(
-#         './Measurements/180508_10/air_interface_results_{}'.format(payload_size))
-#    # print(air_interface_results[payload_size])

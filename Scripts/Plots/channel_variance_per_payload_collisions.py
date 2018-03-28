@@ -6,11 +6,12 @@ import seaborn as sns
 
 sns.axes_style('white')
 
-
 dir = '../Simulations/Measurements/ChannelVariance/20sim_35_days/'
 
 node_files = ['adr_confsimulation_results_node_', 'adr_no_confsimulation_results_node_',
               'no_adr_no_confsimulation_results_node_']
+air_interface_files = ['adr_confair_interface_results_', 'adr_no_confair_interface_results_',
+                       'no_adr_no_confair_interface_results_']
 gateway_files = ['adr_confgateway_results_', 'adr_no_confgateway_results_',
                  'no_adr_no_confgateway_results_']
 
@@ -29,7 +30,7 @@ channel_variance = dict()
 channel_var = dict()
 
 payload_sizes = range(5, 55, 5)
-path_loss_variances = pd.read_pickle(dir + node_files[0] + '{}'.format(payload_sizes[0])).index.values
+path_loss_variances = pd.read_pickle(dir + air_interface_files[0] + '{}'.format(payload_sizes[0])).index.values
 
 for var in path_loss_variances:
     channel_variance[var] = dict()
@@ -38,21 +39,19 @@ for var in path_loss_variances:
         channel_variance[var][p] = 0
 i = 0
 
-
-
-j =0
+j = 0
 colors = dict()
 for var in path_loss_variances:
     colors[var] = color[j]
-    j +=1
+    j += 1
 
 ax_id = range(0, 3)
 # Two subplots, the axes array is 1-d
 f, axarr = plt.subplots(3, sharex=True, sharey=True)
 
-for ax_id, node_f, gateway_f in zip(ax_id, node_files, gateway_files):
+for ax_id, air_f, gateway_f, node_f in zip(ax_id, air_interface_files, gateway_files, node_files):
     ax = axarr[ax_id]
-    ax.set_title(node_f)
+    ax.set_title(air_f)
 
     # clean variables
     for var in path_loss_variances:
@@ -61,18 +60,18 @@ for ax_id, node_f, gateway_f in zip(ax_id, node_files, gateway_files):
         for p in payload_sizes:
             channel_variance[var][p] = 0
 
-
     for p in payload_sizes:
-        nodes_df = pd.read_pickle(dir + node_f + '{}'.format(p))
+        air_df = pd.read_pickle(dir + air_f + '{}'.format(p))
         gateway_df = pd.read_pickle(dir + gateway_f + '{}'.format(p))
-        for var, tx, rx in zip(nodes_df.index.values, nodes_df.UniquePackets, gateway_df.UniquePacketsReceived):
-            channel_variance[var][p] = (rx / tx) * 100
+        node_df = pd.read_pickle(dir + node_f + '{}'.format(p))
+        for var, collided, weak, lost, sent in zip(air_df.index.values, air_df.NumberOfPacketsCollided,
+                                                   gateway_df.ULWeakPackets, node_df.NoDLReceived, node_df.TotalBytes):
+            channel_variance[var][p] = (((collided) * p) / sent)*100
 
     for p in payload_sizes:
         for var in path_loss_variances:
             channel_var[var].append(channel_variance[var][p])
 
-    print(channel_var)
     for var in path_loss_variances:
         ax.plot(payload_sizes, channel_var[var], label=('\sigma_{dB}$: ' + str(var) + ' (dB)'), color=colors[var])
 
@@ -86,6 +85,5 @@ for ax_id, node_f, gateway_f in zip(ax_id, node_files, gateway_files):
 
 f.legend()
 plt.xlabel("Channel Variance")
-plt.ylabel("DER")
+plt.ylabel("Collisions")
 plt.show()
-

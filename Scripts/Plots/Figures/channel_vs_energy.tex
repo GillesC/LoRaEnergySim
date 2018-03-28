@@ -1,0 +1,85 @@
+% This file was created by matplotlib2tikz v0.6.15.
+\begin{tikzpicture}
+
+\definecolor{color0}{rgb}{0.12156862745098,0.466666666666667,0.705882352941177}
+\definecolor{color1}{rgb}{0.682352941176471,0.780392156862745,0.909803921568627}
+\definecolor{color2}{rgb}{1,0.498039215686275,0.0549019607843137}
+\definecolor{color3}{rgb}{1,0.733333333333333,0.470588235294118}
+\definecolor{color4}{rgb}{0.172549019607843,0.627450980392157,0.172549019607843}
+
+\begin{axis}[
+xlabel={Payload Size (B)},
+ylabel={Energy per Byte (mJ/B)},
+xmin=13.25, xmax=51.75,
+ymin=0.911143797385682, ymax=1.53442826325621,
+tick align=outside,
+tick pos=left,
+x grid style={white!69.01960784313725!black},
+y grid style={white!69.01960784313725!black},
+legend entries={{$\sigma_{dB}$: 0 (dB)},{$\sigma_{dB}$: 8 (dB)},{$\sigma_{dB}$: 10 (dB)},{$\sigma_{dB}$: 16 (dB)},{$\sigma_{dB}$: 20 (dB)}},
+legend cell align={left},
+legend style={at={(0.5,0.91)}, anchor=north, draw=white!80.0!black}
+]
+\addlegendimage{no markers, color0}
+\addlegendimage{no markers, color1}
+\addlegendimage{no markers, color2}
+\addlegendimage{no markers, color3}
+\addlegendimage{no markers, color4}
+\addplot [color0, dashed, mark=*, mark size=5, mark options={solid}]
+table {%
+15 1.08058969015345
+20 0.939474909470706
+25 1.06496701505047
+30 1.29869699368822
+35 1.20614420233076
+40 0.980261529117603
+45 1.06879980456744
+50 1.07359964529882
+};
+\addplot [color1, dashed, mark=*, mark size=5, mark options={solid}]
+table {%
+15 1.1590497139267
+20 1.0908549831829
+25 1.02057199752729
+30 1.02086929424446
+35 1.01169948087956
+40 1.02328033829576
+45 1.0548121208895
+50 1.07438265620913
+};
+\addplot [color2, dashed, mark=*, mark size=5, mark options={solid}]
+table {%
+15 1.19876640540615
+20 1.12340882909831
+25 1.05987966544996
+30 1.06411055551279
+35 1.05366165634641
+40 1.06269282101559
+45 1.0884919788786
+50 1.12318601292994
+};
+\addplot [color3, dashed, mark=*, mark size=5, mark options={solid}]
+table {%
+15 1.34911568326098
+20 1.28620618998394
+25 1.22956010016979
+30 1.23918227411127
+35 1.23708232997414
+40 1.24890573422412
+45 1.29597260126016
+50 1.32567738105614
+};
+\addplot [color4, dashed, mark=*, mark size=5, mark options={solid}]
+table {%
+15 1.44980050018474
+20 1.39727774269795
+25 1.34509639066822
+30 1.35954422615246
+35 1.36325236840132
+40 1.39197051090941
+45 1.4562938375253
+50 1.50609715117119
+};
+\end{axis}
+
+\end{tikzpicture}

@@ -4,11 +4,11 @@ import seaborn as sns
 
 sns.set_style("white")
 
-gateway_df = pd.read_pickle('../Measurements/payload_size_energy_1000_sim_100_nodes/adr_conf_gateway_results_100')
+gateway_df = pd.read_pickle('../Measurements/fast_adr_on/gateway_results_100')
 payload_sizes = gateway_df.index.values
 bytes_lost = gateway_df.DLPacketsLost * payload_sizes
 
-nodes_df = pd.read_pickle('../Measurements/payload_size_energy_1000_sim_100_nodes/adr_conf_simulation_results_node_100')
+nodes_df = pd.read_pickle('../Measurements/fast_adr_on/simulation_results_node_100')
 print(nodes_df)
 print(gateway_df)
 energy_per_byte = nodes_df.TxRxEnergy / (gateway_df.UniquePacketsReceived * payload_sizes)
