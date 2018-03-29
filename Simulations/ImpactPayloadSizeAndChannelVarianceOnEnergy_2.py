@@ -22,10 +22,10 @@ desired_width = 320
 pd.set_option('display.width', desired_width)
 
 transmission_rate = 0.02e-3  # 12*8 bits per hour (1 typical packet per hour)
-simulation_time = 365 * 24 * 60 * 60 * 1000
+simulation_time = 30 * 24 * 60 * 60 * 1000
 cell_size = 1000
 adr = False
-confirmed_messages = False
+confirmed_messages = True
 
 
 def plot_time(_env):
@@ -41,7 +41,7 @@ gateway_location = Location(x=middle, y=middle, indoor=False)
 payload_sizes = range(5, 55, 5)
 path_loss_variances = [0, 5, 7.8, 15, 20]
 num_nodes = 100
-num_of_simulations = 50
+num_of_simulations = 20
 
 simultation_results = dict()
 gateway_results = dict()
@@ -75,7 +75,7 @@ for n_sim in range(num_of_simulations):
         for path_loss_variance in path_loss_variances:
 
             env = simpy.Environment()
-            gateway = Gateway(env, gateway_location)
+            gateway = Gateway(env, gateway_location,max_snr_adr=False, avg_snr_adr=True)
             nodes = []
             air_interface = AirInterface(gateway, PropagationModel.LogShadow(std=path_loss_variance), SNRModel(), env)
             np.random.shuffle(locations)
@@ -140,7 +140,7 @@ for n_sim in range(num_of_simulations):
 
 # END LOOP SIMULATION
 
-directory = './Measurements/ChannelVariance/50sim/no_adr_no_conf'
+directory = './Measurements/ChannelVariance/impact_adr_20sim/no_adr_no_conf_avg_snr_'
 if not os.path.exists(directory):
     os.makedirs(directory)
 
