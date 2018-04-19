@@ -62,7 +62,7 @@ class LoRaParameters:
 
     # CR: % 5..8 This is the error correction coding. Higher values mean more overhead.
     # header_implicit_mode -> header is removed
-    def __init__(self, freq, sf: int, bw, cr, crc_enabled, de_enabled, header_implicit_mode, tp=14):
+    def __init__(self, freq, bw, cr, crc_enabled, de_enabled, header_implicit_mode, sf=12, tp=14):
         self.freq = freq
         self.sf = sf
         self.bw = bw
