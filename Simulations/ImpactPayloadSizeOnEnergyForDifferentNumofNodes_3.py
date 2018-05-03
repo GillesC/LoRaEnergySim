@@ -41,7 +41,7 @@ gateway_location = Location(x=middle, y=middle, indoor=False)
 payload_sizes = range(5, 55, 5)
 
 # load locations:
-with open('locations.pkl', 'rb') as filehandler:
+with open('locations_exp1.pkl', 'rb') as filehandler:
     locations_per_simulation = pickle.load(filehandler)
 
 num_of_simulations = len(locations_per_simulation)
@@ -75,7 +75,7 @@ for n_sim in range(num_of_simulations):
         for payload_size in payload_sizes:
 
             env = simpy.Environment()
-            gateway = Gateway(env, gateway_location, fast_adr_on=True)
+            gateway = Gateway(env, gateway_location)
             nodes = []
             air_interface = AirInterface(gateway, PropagationModel.LogShadow(), SNRModel(), env)
             np.random.shuffle(locations)
@@ -138,9 +138,10 @@ for n_sim in range(num_of_simulations):
 
 # END LOOP SIMULATION
 
-directory = 'Scripts/Measurements/payload_size_energy_2_sim_100_nodes_long'
+directory = 'Scripts/Measurements/energy_1000sim_100nodes_30days'
 if not os.path.exists(directory):
     os.makedirs(directory)
+
 
 for num_nodes in num_of_nodes:
     simultation_results[num_nodes]['mean_energy_per_byte'] = list(mu_energy[num_nodes].values())
@@ -150,9 +151,9 @@ for num_nodes in num_of_nodes:
     simultation_results[num_nodes]['CollidedBytes'] = simultation_results[num_nodes].CollidedPackets * \
                                                       simultation_results[num_nodes].index.values
 
-    simultation_results[num_nodes].to_pickle(directory + '/fast_adr_no_conf_simulation_results_node_{}'.format(num_nodes))
+    simultation_results[num_nodes].to_pickle(directory + '/adr_n_conf_simulation_results_node_{}'.format(num_nodes))
     print(simultation_results[num_nodes])
-    gateway_results[num_nodes].to_pickle(directory + '/fast_adr_no_conf_gateway_results_{}'.format(num_nodes))
+    gateway_results[num_nodes].to_pickle(directory + '/adr_n_conf_gateway_results_{}'.format(num_nodes))
     print(gateway_results[num_nodes])
-    air_interface_results[num_nodes].to_pickle(directory + '/fast_adr_no_conf_air_interface_results_{}'.format(num_nodes))
+    air_interface_results[num_nodes].to_pickle(directory + '/adr_n_conf_air_interface_results_{}'.format(num_nodes))
     print(air_interface_results[num_nodes])

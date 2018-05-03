@@ -22,9 +22,9 @@ desired_width = 320
 pd.set_option('display.width', desired_width)
 
 transmission_rate = 0.02e-3  # 12*8 bits per hour (1 typical packet per hour)
-simulation_time = 30 * 24 * 60 * 60 * 1000
+simulation_time = 35 * 24 * 60 * 60 * 1000
 cell_size = 1000
-adr = False
+adr = True
 confirmed_messages = True
 
 
@@ -39,9 +39,8 @@ middle = np.round(Config.CELL_SIZE / 2)
 gateway_location = Location(x=middle, y=middle, indoor=False)
 
 payload_sizes = range(5, 55, 5)
-path_loss_variances = [0, 5, 7.8, 15, 20]
+path_loss_variances = [0.1]
 num_nodes = 100
-num_of_simulations = 20
 
 simultation_results = dict()
 gateway_results = dict()
@@ -61,12 +60,19 @@ for payload_size in payload_sizes:
         mu_energy[payload_size][path_loss_variance] = 0
         sigma_energy[payload_size][path_loss_variance] = 0
 
+directory = './Measurements/ChannelVariance/20_simulations_100_nodes_35_days/adr_conf_var_0_1'
 # load locations:
 with open('locations.pkl', 'rb') as filehandler:
     locations_per_simulation = pickle.load(filehandler)
 
+num_of_simulations =  len(locations_per_simulation)
+
 for n_sim in range(num_of_simulations):
-    print("Staring simulation: {}".format(n_sim))
+    print("Staring simulation: #{} of {}".format(n_sim, num_of_simulations))
+    # Printing experiment parameters
+    print('{} ADR'.format(adr))
+    print('{} confirmed msgs'.format(confirmed_messages))
+    print("Save to: {}".format(directory))
 
     locations = locations_per_simulation[n_sim]
 
@@ -75,7 +81,7 @@ for n_sim in range(num_of_simulations):
         for path_loss_variance in path_loss_variances:
 
             env = simpy.Environment()
-            gateway = Gateway(env, gateway_location,max_snr_adr=False, avg_snr_adr=True)
+            gateway = Gateway(env, gateway_location)
             nodes = []
             air_interface = AirInterface(gateway, PropagationModel.LogShadow(std=path_loss_variance), SNRModel(), env)
             np.random.shuffle(locations)
@@ -128,19 +134,17 @@ for n_sim in range(num_of_simulations):
             sigma_energy[payload_size][path_loss_variance] += sigma / num_of_simulations
 
         # END loop path_loss_variances
-
-        # Printing experiment parameters
         print('{} payload size '.format(payload_size))
         print('{} transmission rate'.format(transmission_rate))
         print('{} ADR'.format(adr))
         print('{} confirmed msgs'.format(confirmed_messages))
         print('{}m cell size'.format(cell_size))
 
+
         # END loop payload_sizes
 
 # END LOOP SIMULATION
 
-directory = './Measurements/ChannelVariance/impact_adr_20sim/no_adr_no_conf_avg_snr_'
 if not os.path.exists(directory):
     os.makedirs(directory)
 
