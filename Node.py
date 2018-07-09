@@ -32,8 +32,11 @@ class NodeState(Enum):
 
 class Node:
     def __init__(self, node_id, energy_profile: EnergyProfile, lora_parameters, sleep_time, process_time, adr, location,
-                 base_station: Gateway, env, payload_size, air_interface, confirmed_messages=True):
-
+                 base_station: Gateway, env, payload_size, air_interface, confirmed_messages=True,
+                 massive_mimo_gain=False, number_of_antennas=1):
+        self.power_gain = 1
+        if massive_mimo_gain:
+            self.power_gain = 1/np.sqrt(number_of_antennas)
         self.num_tx_state_changes = 0
         self.total_wait_time_because_dc = 0
         self.num_no_downlink = 0
@@ -462,7 +465,7 @@ class Node:
                 energy_consumed_in_state_mJ = LoRaParameters.RADIO_TX_PREP_ENERGY_MJ
                 track_node_state = NodeState.TX
             elif new_state == NodeState.TX:
-                power_consumed_in_state_mW = self.energy_profile.tx_power_mW[packet.lora_param.tp]
+                power_consumed_in_state_mW = self.energy_profile.tx_power_mW[packet.lora_param.tp]*self.power_gain
                 energy_consumed_in_state_mJ = power_consumed_in_state_mW * (packet.my_time_on_air() / 1000)
                 self.num_tx_state_changes += 1
             elif new_state == NodeState.RADIO_PRE_RX:

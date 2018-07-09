@@ -8,6 +8,8 @@ class LogShadow:
         self.gamma = gamma
         self.d0 = d0
         self.std = std
+        if self.std<0:
+            self.std = 0
         self.Lpld0 = Lpld0
         self.GL = GL
 
