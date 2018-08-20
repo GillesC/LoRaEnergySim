@@ -24,4 +24,6 @@ MAX_DELAY_BEFORE_SLEEP_MS = 500
 PRINT_ENABLED = False
 MAX_DELAY_START_PER_NODE_MS = np.round(simulation_time / 10)
 track_changes = True
+middle = np.round(cell_size / 2)
+
 ############### DEFAULT PARAMETERS ###############

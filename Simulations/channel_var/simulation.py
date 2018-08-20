@@ -13,7 +13,6 @@ from GlobalConfig import *
 desired_width = 320
 pd.set_option('display.width', desired_width)
 
-middle = np.round(cell_size / 2)
 gateway_location = Location(x=middle, y=middle, indoor=False)
 
 
