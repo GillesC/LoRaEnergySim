@@ -1,11 +1,10 @@
 from collections import deque  # circular buffer for storing SNR history for the ADR algorithm
 
-import numpy as np
+import pandas as pd
 
 from LoRaPacket import UplinkMessage, DownlinkMetaMessage, DownlinkMessage
-from Global import Config
 from LoRaParameters import LoRaParameters
-import pandas as pd
+from Simulations.GlobalConfig import *
 
 
 def required_snr(dr):
@@ -31,8 +30,8 @@ def required_snr(dr):
 class Gateway:
     SENSITIVITY = {6: -121, 7: -126.5, 8: -129, 9: -131.5, 10: -134, 11: -136.5, 12: -139.5}
 
-
-    def __init__(self, env, location, fast_adr_on=False, max_snr_adr=True, min_snr_adr=False, avg_snr_adr=False, adr_margin_db=10):
+    def __init__(self, env, location, fast_adr_on=False, max_snr_adr=True, min_snr_adr=False, avg_snr_adr=False,
+                 adr_margin_db=10):
         self.bytes_received = 0
         self.location = location
         self.packet_history = dict()
@@ -179,7 +178,6 @@ class Gateway:
                 # default
                 snr_history_val = np.amax(np.asanyarray(history))
 
-
             if packet.lora_param.sf == 7:
                 adr_required_snr = -7.5
             elif packet.lora_param.sf == 8:
@@ -227,7 +225,7 @@ class Gateway:
                 # TX power is increased by 3dBm per step, until TXmax is reached (=14 dBm for EU868).
                 num_steps = - num_steps  # invert so we do not need to work with negative numbers
                 new_tx_power = np.amin([current_tx_power + (num_steps * 3), 14])
-            if Config.PRINT_ENABLED:
+            if PRINT_ENABLED:
                 print(str({'dr': new_dr, 'tp': new_tx_power}))
 
             return {'dr': new_dr, 'tp': new_tx_power}

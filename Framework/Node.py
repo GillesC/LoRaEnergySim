@@ -1,20 +1,17 @@
+from copy import deepcopy
 from enum import Enum, auto
 
 import matplotlib.pyplot as plt
-import numpy as np
+import pandas as pd
 
 from EnergyProfile import EnergyProfile
 from Gateway import Gateway
-from Global import Config
-from LoRaPacket import UplinkMessage
 from LoRaPacket import DownlinkMessage
 from LoRaPacket import DownlinkMetaMessage
+from LoRaPacket import UplinkMessage
 from LoRaParameters import LoRaParameters
-
-from copy import deepcopy
-
 from Location import Location
-import pandas as pd
+from Simulations.GlobalConfig import *
 
 
 class NodeState(Enum):
@@ -126,19 +123,19 @@ class Node:
         plt.show()
 
     def run(self):
-        random_wait = np.random.uniform(0, Config.MAX_DELAY_START_PER_NODE_MS)
+        random_wait = np.random.uniform(0,  MAX_DELAY_START_PER_NODE_MS)
         yield self.env.timeout(random_wait)
         self.start_device_active = self.env.now
-        if Config.PRINT_ENABLED:
+        if  PRINT_ENABLED:
             print('{} ms delayed prior to joining'.format(random_wait))
             print('{} joining the network'.format(self.id))
             # TODO ERROR!!!!! self.process
             self.join(self.env)
-        if Config.PRINT_ENABLED:
+        if  PRINT_ENABLED:
             print('{}: joined the network'.format(self.id))
         while True:
             # added also a random wait to accommodate for any timing issues on the node itself
-            random_wait = np.random.randint(0, Config.MAX_DELAY_BEFORE_SLEEP_MS)
+            random_wait = np.random.randint(0,  MAX_DELAY_BEFORE_SLEEP_MS)
             yield self.env.timeout(random_wait)
 
             yield self.env.process(self.sleep())
@@ -148,11 +145,16 @@ class Node:
             self.track_power(self.energy_profile.sleep_power_mW)
 
             # ------------SENDING------------ #
-            if Config.PRINT_ENABLED:
+            if  PRINT_ENABLED:
                 print('{}: SENDING packet'.format(self.id))
 
             self.unique_packet_id += 1
-            packet = UplinkMessage(node=self, start_on_air=self.env.now, payload_size=self.payload_size,
+
+            payload_size = self.payload_size
+            if MAC_IMPROVEMENT and self.packets_sent < 20:
+                payload_size = 5
+
+            packet = UplinkMessage(node=self, start_on_air=self.env.now, payload_size=payload_size,
                                    confirmed_message=self.confirmed_messages, id=self.unique_packet_id)
             downlink_message = yield self.env.process(self.send(packet))
             if downlink_message is None:
@@ -161,7 +163,7 @@ class Node:
             else:
                 yield self.env.process(self.process_downlink_message(downlink_message, packet))
 
-            if Config.PRINT_ENABLED:
+            if  PRINT_ENABLED:
                 print('{}: DONE sending'.format(self.id))
 
             self.num_unique_packets_sent += 1  # at the end to be sure that this packet was tx
@@ -180,7 +182,7 @@ class Node:
 
     def join_tx(self):
 
-        if Config.PRINT_ENABLED:
+        if  PRINT_ENABLED:
             print('{}: \t JOIN TX'.format(self.id))
         energy = LoRaParameters.JOIN_TX_ENERGY_MJ
 
@@ -191,7 +193,7 @@ class Node:
         self.track_energy('tx', energy)
 
     def join_wait(self):
-        if Config.PRINT_ENABLED:
+        if  PRINT_ENABLED:
             print('{}: \t JOIN WAIT'.format(self.id))
         self.track_power(self.energy_profile.sleep_power_mW)
         yield self.env.timeout(LoRaParameters.JOIN_ACCEPT_DELAY1)
@@ -202,7 +204,7 @@ class Node:
 
     def join_rx(self):
         # TODO RX1 and RX2
-        if Config.PRINT_ENABLED:
+        if  PRINT_ENABLED:
             print('{}: \t JOIN RX'.format(self.id))
         power = (LoRaParameters.JOIN_RX_ENERGY_MJ / LoRaParameters.JOIN_RX_TIME_MS) * 1000
         self.track_power(power)
@@ -242,7 +244,7 @@ class Node:
         #      Received at BS      #
 
         if not collided:
-            if Config.PRINT_ENABLED:
+            if  PRINT_ENABLED:
                 print('{}: \t REC at BS'.format(self.id))
             downlink_message = self.base_station.packet_received(self, packet, self.env.now)
         else:
@@ -265,13 +267,13 @@ class Node:
 
         if downlink_message.adr_param is not None and self.adr:
             if int(self.lora_param.dr) != int(downlink_message.adr_param['dr']):
-                if Config.PRINT_ENABLED:
+                if  PRINT_ENABLED:
                     print('\t\t Change DR {} to {}'.format(self.lora_param.dr, downlink_message.adr_param['dr']))
                 self.lora_param.change_dr_to(downlink_message.adr_param['dr'])
                 changed = True
             # change tp based on downlink_message['tp']
             if int(self.lora_param.tp) != int(downlink_message.adr_param['tp']):
-                if Config.PRINT_ENABLED:
+                if  PRINT_ENABLED:
                     print('\t\t Change TP {} to {}'.format(self.lora_param.tp, downlink_message.adr_param['tp']))
                 self.lora_param.change_tp_to(downlink_message.adr_param['tp'])
                 changed = True
@@ -283,7 +285,7 @@ class Node:
             self.change_lora_param[lora_param_str].append(self.env.now)
 
     def log(self):
-        if Config.LOG_ENABLED:
+        if  LOG_ENABLED:
             print('---------- LOG from Node {} ----------'.format(self.id))
             print('\t Location {},{}'.format(self.location.x, self.location.y))
             print('\t Distance from gateway {}'.format(Location.distance(self.location, self.base_station.location)))
@@ -311,7 +313,7 @@ class Node:
 
         self.energy_value += packet.lora_param.tp + (5 - packet.lora_param.dr)
 
-        if Config.PRINT_ENABLED:
+        if  PRINT_ENABLED:
             print('{}: \t TX'.format(self.id))
 
         self.change_state(NodeState.RADIO_TX_PREP_TIME_MS)
@@ -335,14 +337,14 @@ class Node:
             rx_on_rx2 = downlink_message.meta.scheduled_receive_slot == DownlinkMetaMessage.RX_SLOT_2
 
         # RX1 wait             #
-        if Config.PRINT_ENABLED:
+        if  PRINT_ENABLED:
             print('{}: \t WAIT'.format(self.id))
 
         self.change_state(NodeState.SLEEP)
 
         yield env.timeout(LoRaParameters.RX_WINDOW_1_DELAY)
 
-        if Config.PRINT_ENABLED:
+        if  PRINT_ENABLED:
             print('{}: \t\t RX1'.format(self.id))
 
         # changed_state is called internally
@@ -356,7 +358,7 @@ class Node:
             self.change_state(NodeState.SLEEP)
             yield env.timeout(sleep_between_rx1_rx2_window)
 
-        if Config.PRINT_ENABLED:
+        if  PRINT_ENABLED:
             print('{}: \t\t RX2'.format(self.id))
 
         if not rx_on_rx1:
@@ -400,14 +402,14 @@ class Node:
 
     def sleep(self):
         # ------------SLEEPING------------ #
-        if Config.PRINT_ENABLED:
+        if  PRINT_ENABLED:
             print('{}: START sleeping'.format(self.id))
         self.change_state(NodeState.SLEEP)
         yield self.env.timeout(self.sleep_time)
 
     def processing(self):
         # ------------PROCESSING------------ #
-        if Config.PRINT_ENABLED:
+        if  PRINT_ENABLED:
             print('{}: PROCESSING'.format(self.id))
         self.change_state(NodeState.PROCESS)
         yield self.env.timeout(self.process_time)
