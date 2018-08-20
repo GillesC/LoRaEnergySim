@@ -1,10 +1,12 @@
+import os
 import pickle
 
+from GlobalConfig import locations_file
 from Location import Location
 
-num_locations = 10
+num_locations = 100
 cell_size = 1000
-num_of_simulations = 10
+num_of_simulations = 1000
 
 locations_per_simulation = list()
 for num_sim in range(num_of_simulations):
@@ -13,7 +15,9 @@ for num_sim in range(num_of_simulations):
         locations.append(Location(min=0, max=cell_size, indoor=False))
     locations_per_simulation.append(locations)
 
-with open('locations/{}_locations_{}_sim.pkl'.format(num_locations, num_of_simulations), 'wb') as f:
+
+os.makedirs(os.path.dirname(locations_file), exist_ok=True)
+with open(locations_file, 'wb') as f:
     pickle.dump(locations_per_simulation, f)
 
 # just to test the code

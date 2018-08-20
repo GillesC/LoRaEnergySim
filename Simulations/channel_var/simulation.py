@@ -1,5 +1,6 @@
 import gc
 import multiprocessing as mp
+import os
 import pickle
 
 import pandas as pd
@@ -52,7 +53,7 @@ if __name__ == '__main__':
             'confirmed_messages': confirmed_messages,
             'num_simulations': num_of_simulations,
             'total_devices': num_nodes,
-            'transmission_rate': transmission_rate_ms_per_bit,
+            'transmission_rate': transmission_rate_bit_per_ms,
             'simulation_time': simulation_time,
             'nodes': dict(),
             'gateway': dict(),
@@ -82,16 +83,17 @@ if __name__ == '__main__':
                 for path_loss_variance in path_loss_variances:
                     args.append((locations, payload_size, path_loss_variance, simulation_time,
                                  gateway_location, num_nodes,
-                                 transmission_rate_ms_per_bit, confirmed_messages, adr))
+                                 transmission_rate_bit_per_ms, confirmed_messages, adr))
             r_list = pool.map(func=SimulationProcess.run_helper, iterable=args)
             gc.collect()
             for r in r_list:
                 _sigma = r['path_loss_std']
                 _p_size = r['payload_size']
                 process_results(_results, _p_size, _sigma)
-            # update Results
-            # can check progress during execution of simulation process
-            pickle.dump(_results, open(
-                "results/{}_{}_{}_{}_SF_random.p".format(adr, confirmed_messages, num_of_simulations,
-                                                                        num_nodes), "wb"))
+                # update Results
+                # can check progress during execution of simulation process
+                file_name = "results/{}_{}_{}_{}_SF_random.p".format(adr, confirmed_messages, num_of_simulations,
+                                                                     num_nodes)
+            os.makedirs(os.path.dirname(file_name), exist_ok=True)
+            pickle.dump(_results, open(file_name, "wb"))
         pool.close()
