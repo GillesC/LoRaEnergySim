@@ -14,7 +14,9 @@ payload_sizes = range(5, 55, 5)
 path_loss_variances = [7.9]  # [0, 5, 7.8, 15, 20]
 
 MAC_IMPROVEMENT = False
-locations_file = "Locations/"+"10_locations_10_sim.pkl"
+num_locations = 500
+num_simulations = 1000
+locations_file = "Locations/"+"{}_locations_{}_sim.pkl".format(num_locations, num_simulations)
 
 ############### SIMULATION SPECIFIC PARAMETERS ###############
 

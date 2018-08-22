@@ -44,7 +44,7 @@ if __name__ == '__main__':
     with open(locations_file, 'rb') as file_handler:
         locations_per_simulation = pickle.load(file_handler)
         num_of_simulations = len(locations_per_simulation)
-        num_nodes = len(locations_per_simulation[0])
+        num_nodes = 200 #len(locations_per_simulation[0])
 
         _results = {
             'cell_size': cell_size,
