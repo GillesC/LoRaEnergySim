@@ -43,8 +43,8 @@ if __name__ == '__main__':
     # load locations:
     with open(locations_file, 'rb') as file_handler:
         locations_per_simulation = pickle.load(file_handler)
-        num_of_simulations = 10 #len(locations_per_simulation)
-        num_nodes = 500  # len(locations_per_simulation[0])
+        num_of_simulations = len(locations_per_simulation)
+        num_nodes = len(locations_per_simulation[0])
 
         _results = {
             'cell_size': cell_size,
@@ -91,8 +91,8 @@ if __name__ == '__main__':
                 process_results(_results, _p_size, _sigma)
                 # update Results
                 # can check progress during execution of simulation process
-            file_name = "results/{}_{}_{}_{}_SF_random.p".format(adr, confirmed_messages, num_of_simulations,
-                                                                 num_nodes)
+            file_name = "results/{}_{}_{}_{}_{}_SF_random.p".format(adr, confirmed_messages, num_of_simulations,
+                                                                    num_nodes, transmission_rate_id)
             os.makedirs(os.path.dirname(file_name), exist_ok=True)
             pickle.dump(_results, open(file_name, "wb"))
         pool.close()
