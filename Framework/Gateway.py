@@ -151,7 +151,7 @@ class Gateway:
 
     def check_duty_cycle(self, payload_size, sf, freq, now) -> (bool, float, float):
         import LoRaPacket
-        time_on_air = LoRaPacket.time_on_air(payload_size, lora_param=LoRaParameters(freq, sf, 125, 5, 1, 0, 1))
+        time_on_air = LoRaPacket.time_on_air(payload_size, lora_param=LoRaParameters(freq=freq, sf=sf, bw=125, cr=5, crc_enabled=1, de_enabled=0, header_implicit_mode=1))
         # it is not possible to schedule a message now on this channel for this message
         if self.time_off[freq] > self.env.now:
             return False, time_on_air, -1

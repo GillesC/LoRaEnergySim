@@ -36,7 +36,8 @@ class LoRaParameters:
     DEFAULT_CHANNELS = [868100000, 868300000, 868500000]
     CHANNELS = [868100000, 868300000, 868500000, 868525000]
     CHANNEL_DUTY_CYCLE_PROC = {868100000: 1, 868300000: 1, 868500000: 1, 868525000: 10}  # in procent
-    CHANNEL_DUTY_CYCLE = {868100000: 1/100, 868300000: 1/100, 868500000: 1/100, 868525000: 10/100}  # not in procent
+    CHANNEL_DUTY_CYCLE = {868100000: 1 / 100, 868300000: 1 / 100, 868500000: 1 / 100,
+                          868525000: 10 / 100}  # not in procent
 
     JOIN_TX_TIME_MS = 160
     JOIN_TX_ENERGY_MJ = 9
@@ -63,6 +64,8 @@ class LoRaParameters:
     # CR: % 5..8 This is the error correction coding. Higher values mean more overhead.
     # header_implicit_mode -> header is removed
     def __init__(self, freq, bw, cr, crc_enabled, de_enabled, header_implicit_mode, sf=12, tp=14):
+        assert (bw == 125), "Only 125MHz bandwidth is supported"
+        assert (12 >= sf >= 7), "SF needs to be between [7, 12]"
         self.freq = freq
         self.sf = sf
         self.bw = bw
