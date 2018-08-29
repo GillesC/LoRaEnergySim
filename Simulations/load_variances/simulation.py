@@ -1,4 +1,5 @@
 import gc
+import math
 import multiprocessing as mp
 import os
 import pickle
@@ -16,7 +17,7 @@ pd.set_option('display.width', desired_width)
 gateway_location = Location(x=middle, y=middle, indoor=False)
 
 
-def process_results(results, p_size, sigma):
+def process_results(results, p_size, sigma, r):
     p_size = str(p_size)
     sigma = str(sigma)
     if sigma not in results['nodes'][p_size]:
@@ -46,6 +47,14 @@ if __name__ == '__main__':
         num_of_simulations = len(locations_per_simulation)
         num_nodes = len(locations_per_simulation[0])
 
+    resume_from_simulation = 0
+
+    if os.path.isfile(results_file) and load_prev_simulation_results:
+        _results = pickle.load(open(results_file, "rb"))
+        if 'idx_of_simulations_done' in _results:
+            resume_from_simulation = _results['idx_of_simulations_done'] + 1
+    else:
+        os.makedirs(os.path.dirname(results_file), exist_ok=True)
         _results = {
             'cell_size': cell_size,
             'adr': adr,
@@ -60,39 +69,36 @@ if __name__ == '__main__':
             'path_loss_variances': path_loss_variances,
             'payload_sizes': payload_sizes,
             'mean_energy': dict(),
-            'std_energy': dict()
+            'std_energy': dict(),
+            'num_of_simulations_done': 0
         }
 
-        print(_results)
+    for payload_size in payload_sizes:
+        _results['nodes'][str(payload_size)] = dict()
+        _results['gateway'][str(payload_size)] = dict()
+        _results['air_interface'][str(payload_size)] = dict()
+        _results['mean_energy'][str(payload_size)] = dict()
+        _results['std_energy'][str(payload_size)] = dict()
 
+    pool = mp.Pool(math.floor(mp.cpu_count() / 5))
+    for n_sim in range(resume_from_simulation, num_of_simulations):
+        print('Simulation #{}'.format(n_sim))
+        locations = locations_per_simulation[n_sim]
+        args = []
         for payload_size in payload_sizes:
-            _results['nodes'][str(payload_size)] = dict()
-            _results['gateway'][str(payload_size)] = dict()
-            _results['air_interface'][str(payload_size)] = dict()
-            _results['mean_energy'][str(payload_size)] = dict()
-            _results['std_energy'][str(payload_size)] = dict()
+            for path_loss_variance in path_loss_variances:
+                args.append((locations, payload_size, path_loss_variance, simulation_time,
+                             gateway_location, num_nodes,
+                             transmission_rate_bit_per_ms, confirmed_messages, adr))
+        r_list = pool.map(func=SimulationProcess.run_helper, iterable=args)
+        gc.collect()
+        for _r in r_list:
+            _sigma = _r['path_loss_std']
+            _p_size = _r['payload_size']
+            process_results(_results, _p_size, _sigma, _r)
+            # update Results
+            # can check progress during execution of simulation process
 
-        cnt = 0
-        pool = mp.Pool(mp.cpu_count())
-        for n_sim in range(num_of_simulations):
-            print('Simulation #{}'.format(n_sim))
-            locations = locations_per_simulation[n_sim]
-            args = []
-            for payload_size in payload_sizes:
-                for path_loss_variance in path_loss_variances:
-                    args.append((locations, payload_size, path_loss_variance, simulation_time,
-                                 gateway_location, num_nodes,
-                                 transmission_rate_bit_per_ms, confirmed_messages, adr))
-            r_list = pool.map(func=SimulationProcess.run_helper, iterable=args)
-            gc.collect()
-            for r in r_list:
-                _sigma = r['path_loss_std']
-                _p_size = r['payload_size']
-                process_results(_results, _p_size, _sigma)
-                # update Results
-                # can check progress during execution of simulation process
-            file_name = "results/{}_{}_{}_{}_{}_SF_random.p".format(adr, confirmed_messages, num_of_simulations,
-                                                                    num_nodes, transmission_rate_id)
-            os.makedirs(os.path.dirname(file_name), exist_ok=True)
-            pickle.dump(_results, open(file_name, "wb"))
-        pool.close()
+        _results['idx_of_simulations_done'] = n_sim
+        pickle.dump(_results, open(results_file, "wb"))
+    pool.close()
