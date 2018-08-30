@@ -1,18 +1,16 @@
 import os
 import pickle
 
-from GlobalConfig import locations_file
+from GlobalConfig import *
 from Location import Location
 
-num_locations = 500
-cell_size = 1000
-num_of_simulations = 1000
+# Simulation specific parameters extracted from GlobalConfig.py
 
 locations_per_simulation = list()
 for num_sim in range(num_of_simulations):
     locations = list()
     for i in range(num_locations):
-        locations.append(Location(min=0, max=cell_size, indoor=False))
+        locations.append(Location(min=0, max=max_x, minY=0, maxY=max_y, indoor=False))
     locations_per_simulation.append(locations)
 
 

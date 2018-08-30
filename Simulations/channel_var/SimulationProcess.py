@@ -19,11 +19,16 @@ def run_helper(args):
     return run(*args)
 
 
-def run(locs, p_size, sigma, sim_time, gateway_location, num_nodes, transmission_rate, confirmed_messages, adr):
+def run(locs, p_size, sigma, sim_time, num_gateways, gw_loc, num_nodes, transmission_rate, confirmed_messages, adr):
     sim_env = simpy.Environment()
-    gateway = Gateway(sim_env, gateway_location, max_snr_adr=True, avg_snr_adr=False)
+    #gateway = Gateway(sim_env, gateway_location, max_snr_adr=True, avg_snr_adr=False)
+    air_interface = AirInterface(PropagationModel.LogShadow(std=sigma), SNRModel(), sim_env)
+    gateways = []
+    for gw_id in range(num_gateways):
+        gateway = Gateway(sim_env, gw_id, gw_loc[gw_id], max_snr_adr=True, avg_snr_adr=False)
+        air_interface.add_gateway(gateway)
+        gateways.append(gateway)
     nodes = []
-    air_interface = AirInterface(gateway, PropagationModel.LogShadow(std=sigma), SNRModel(), sim_env)
     for node_id in range(num_nodes):
         energy_profile = EnergyProfile(5.7e-3, 15, tx_power_mW,
                                        rx_power=rx_measurements)
@@ -37,7 +42,7 @@ def run(locs, p_size, sigma, sim_time, gateway_location, num_nodes, transmission
                     process_time=5,
                     adr=adr,
                     location=locs[node_id],
-                    base_station=gateway, env=sim_env, payload_size=p_size, air_interface=air_interface,
+                    env=sim_env, payload_size=p_size, air_interface=air_interface,
                     confirmed_messages=confirmed_messages)
         nodes.append(node)
         sim_env.process(node.run())
@@ -54,7 +59,7 @@ def run(locs, p_size, sigma, sim_time, gateway_location, num_nodes, transmission
     data_mean_nodes = Node.get_mean_simulation_data_frame(nodes, name=sigma) / (
         num_nodes)
 
-    data_gateway = gateway.get_simulation_data(name=sigma) / num_nodes
+    data_gateway = Gateway.get_simulation_data_frame(gateways, name=sigma)/ num_nodes
     data_air_interface = air_interface.get_simulation_data(name=sigma) / (
         num_nodes)
 
@@ -63,7 +68,7 @@ def run(locs, p_size, sigma, sim_time, gateway_location, num_nodes, transmission
 
     return {
         'mean_nodes': data_mean_nodes,
-        'gateway': data_gateway,
+        'gateways': data_gateway,
         'air_interface': data_air_interface,
         'path_loss_std': sigma,
         'payload_size': p_size,
