@@ -11,12 +11,12 @@ import gc
 
 
 class AirInterface:
-    def __init__(self, gateway: Gateway, prop_model: PropagationModel, snr_model: SNRModel, env):
+    def __init__(self, prop_model: PropagationModel, snr_model: SNRModel, env):
 
         self.prop_measurements = {}
         self.num_of_packets_collided = 0
         self.num_of_packets_send = 0
-        self.gateway = gateway
+        self.gateways = []
         self.packages_in_air = list()
         self.color_per_node = dict()
         self.prop_model = prop_model
@@ -118,46 +118,49 @@ class AirInterface:
             return None
 
     @staticmethod
-    def power_collision(me: UplinkMessage, other: UplinkMessage, time_collided_nodes):
+    def power_collision(me: UplinkMessage, other: UplinkMessage, receiver_id, time_collided_nodes):
         power_threshold = 6  # dB
+        me.collided[receiver_id] = other.collided[receiver_id] = False
         if   PRINT_ENABLED:
             print(
-                "pwr: node {0.node.id} {0.rss:3.2f} dBm node {1.node.id} {1.rss:3.2f} dBm; diff {2:3.2f} dBm".format(me,
+                "pwr: gateway {} node {1.node.id} {1.rss:3.2f} dBm node {2.node.id} {2.rss:3.2f} dBm; diff {3:3.2f} dBm".format(receiver_id,
+                                                                                                                     me,
                                                                                                                      other,
-                                                                                                                     round(
-                                                                                                                         me.rss - other.rss,
+                                                                                                                     round(me.rss[receiver_id]
+                                                                                                                        - other.rss[receiver_id],
                                                                                                                          2)))
-        if abs(me.rss - other.rss) < power_threshold:
+        if abs(me.rss[receiver_id] - other.rss[receiver_id]) < power_threshold:
             if   PRINT_ENABLED:
                 print("collision pwr both node {} and node {} (too close to each other)".format(me.node.id,
                                                                                                 other.node.id))
             if me in time_collided_nodes:
-                me.collided = True
+                me.collided[receiver_id] = True
             if other in time_collided_nodes:
-                other.collided = True
+                other.collided[receiver_id] = True
 
-        elif me.rss - other.rss < power_threshold:
+        elif me.rss[receiver_id] - other.rss[receiver_id] < power_threshold:
             # me has been overpowered by other
             # me will collided if also time_collided
 
             if me in time_collided_nodes:
                 if   PRINT_ENABLED:
                     print("collision pwr both node {} has collided by node {}".format(me.node.id, other.node.id))
-                me.collided = True
+                me.collided[receiver_id] = True
         else:
             # other was overpowered by me
             if other in time_collided_nodes:
                 if   PRINT_ENABLED:
                     print("collision pwr both node {} has collided by node {}".format(other.node.id, me.node.id))
-                other.collided = True
+                other.collided[receiver_id] = True
 
     def collision(self, packet) -> bool:
         if   PRINT_ENABLED:
             print("CHECK node {} (sf:{} bw:{} freq:{:.6e}) #others: {}".format(
                 packet.node.id, packet.lora_param.sf, packet.lora_param.bw, packet.lora_param.freq,
                 len(self.packages_in_air)))
-        if packet.collided:
+        if packet.is_collided:
             return True
+
         for other in self.packages_in_air:
             if other.node.id != packet.node.id:
                 if   PRINT_ENABLED:
@@ -168,8 +171,12 @@ class AirInterface:
                     if AirInterface.sf_collision(packet, other):
                         time_collided_nodes = AirInterface.timing_collision(packet, other)
                         if time_collided_nodes is not None:
-                            AirInterface.power_collision(packet, other, time_collided_nodes)
-        return packet.collided
+                            # check power collisions at each gw's receiver
+                            for gw in self.gateways:
+                                AirInterface.power_collision(packet, other, gw.id, time_collided_nodes)
+
+        packet.is_collided = False not in packet.collided.values()
+        return packet.is_collided
 
     color_values = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f']
 
@@ -184,17 +191,22 @@ class AirInterface:
 
         from_node = packet.node
         node_id = from_node.id
-        rss = self.prop_model.tp_to_rss(from_node.location.indoor, packet.lora_param.tp,
-                                        Location.distance(self.gateway.location, packet.node.location))
-        if node_id not in self.prop_measurements:
-            self.prop_measurements[node_id] = {'rss': [], 'snr': [], 'time': []}
-        packet.rss = rss
-        snr = self.snr_model.rss_to_snr(rss)
-        packet.snr = snr
+        # Calculate RSSI and SNR from node to each gateway
+        for gw in self.gateways:
+            d = Location.distance(gw.location, from_node.location)
+            rss = self.prop_model.tp_to_rss(from_node.location.indoor, packet.lora_param.tp, d)
+            if node_id not in self.prop_measurements:
+                self.prop_measurements[node_id] = {}
+            if gw.id not in self.prop_measurements[node_id]:
+                self.prop_measurements[node_id][gw.id] = {'rss': [], 'snr': [], 'time': []}
+            packet.rss[gw.id] = rss
+            snr = self.snr_model.rss_to_snr(rss)
+            packet.snr[gw.id] = snr
+            packet.collided[gw.id] = False  # collisions are checked later, once the packet is already in the air
 
-        self.prop_measurements[node_id]['time'].append(self.env.now)
-        self.prop_measurements[node_id]['rss'].append(rss)
-        self.prop_measurements[node_id]['snr'].append(snr)
+            self.prop_measurements[node_id][gw.id]['time'].append(self.env.now)
+            self.prop_measurements[node_id][gw.id]['rss'].append(rss)
+            self.prop_measurements[node_id][gw.id]['snr'].append(snr)
 
         self.packages_in_air.append(packet)
         gc.collect()
@@ -212,6 +224,9 @@ class AirInterface:
         self.packages_in_air.remove(packet)
         gc.collect()
         return collided
+
+    def add_gateway(self, gw: Gateway):
+        self.gateways.append(gw)
 
     def plot_packets_in_air(self):
         plt.figure()

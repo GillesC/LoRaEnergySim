@@ -29,7 +29,7 @@ class NodeState(Enum):
 
 class Node:
     def __init__(self, node_id, energy_profile: EnergyProfile, lora_parameters, sleep_time, process_time, adr, location,
-                 base_station: Gateway, env, payload_size, air_interface, confirmed_messages=True,
+                 env, payload_size, air_interface, confirmed_messages=True,
                  massive_mimo_gain=False, number_of_antennas=1):
         self.power_gain = 1
         if massive_mimo_gain:
@@ -45,7 +45,6 @@ class Node:
         self.adr = adr
         self.id = node_id
         self.energy_profile = energy_profile
-        self.base_station = base_station
         self.process_time = process_time
         # self.air_interface = AirInterface(base_station)
         self.env = env
@@ -225,7 +224,7 @@ class Node:
         packet.lora_param.freq = channel
 
         if self.time_off[channel] > self.env.now:
-            # wait for certaint time to respect duty cycle
+            # wait for certain time to respect duty cycle
             wait = self.time_off[channel] - self.env.now
             self.change_state(NodeState.SLEEP)
             self.total_wait_time_because_dc += wait
@@ -244,9 +243,16 @@ class Node:
         #      Received at BS      #
 
         if not collided:
-            if  PRINT_ENABLED:
-                print('{}: \t REC at BS'.format(self.id))
-            downlink_message = self.base_station.packet_received(self, packet, self.env.now)
+            # Network Server chooses the gw with highest SNR to relay downlink traffic.
+            # Nodes can extract this information from air interface and packet instances
+            # TODO implement a Network Server class to preserve fidelity to this behaviour
+
+            max_snr_idx = Node.find_link_max_snr(packet) # max(packet.snr, key=packet.snr.get)
+            if max_snr_idx is not None:
+                downlink_bs = self.air_interface.gateways[max_snr_idx]
+                if  PRINT_ENABLED:
+                    print('{}: \t REC at BS {}'.format(self.id, downlink_bs.id))
+                downlink_message = downlink_bs.packet_relayed(self, packet, self.env.now)
         else:
             self.num_collided += 1
             downlink_message = None
@@ -254,6 +260,18 @@ class Node:
         yield self.env.process(self.send_rx(self.env, packet, downlink_message))
 
         return downlink_message
+
+    @staticmethod
+    def find_link_max_snr(packet: UplinkMessage):
+        found = False
+        while not found:
+            idx = max(packet.snr, key=packet.snr.get)
+            if not packet.collided[idx]:
+                found = True
+            else:
+                packet.snr.pop(idx)
+
+        return idx
 
     def process_downlink_message(self, downlink_message, uplink_message):
         changed = False
@@ -288,7 +306,7 @@ class Node:
         if  LOG_ENABLED:
             print('---------- LOG from Node {} ----------'.format(self.id))
             print('\t Location {},{}'.format(self.location.x, self.location.y))
-            print('\t Distance from gateway {}'.format(Location.distance(self.location, self.base_station.location)))
+            #print('\t Distance from gateway {}'.format(Location.distance(self.location, self.base_station.location)))
             print('\t LoRa Param {}'.format(self.lora_param))
             print('\t ADR {}'.format(self.adr))
             print('\t Payload size {}'.format(self.payload_size))

@@ -30,10 +30,12 @@ class UplinkMessage:
         self.lora_param = node.lora_param
         self.lora_param.freq = np.random.choice(LoRaParameters.DEFAULT_CHANNELS)
         self.payload_size = payload_size
-        self.collided = collided
+        self.collided = {} #collided
+        self.is_collided = collided
         self.received = False
-        self.rss = None
-        self.snr = None
+        # RSSI and SNR attributes are dictionaries containing values for each GW present in LoRa network
+        self.rss = {} #None
+        self.snr = {} #None
         self.on_air = None
         self._time_on_air = None
         self.ack_retries_cnt = 0
