@@ -1,6 +1,7 @@
 import numpy as np
 import math
 
+
 ############### SIMULATION SPECIFIC PARAMETERS ###############
 start_with_fixed_sf = False
 start_sf = 7
@@ -10,8 +11,9 @@ simulation_time = 24 * 60 * 60 * 1000 * 1
 num_locations = 100
 cell_size = 1000
 overlap = np.round(cell_size / 4)
-num_of_simulations = 1000
+num_of_simulations = 300
 num_of_gateways = 4
+indoor_nodes = False
 adr = True
 confirmed_messages = True
 
