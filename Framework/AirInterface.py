@@ -123,7 +123,7 @@ class AirInterface:
         me.collided[receiver_id] = other.collided[receiver_id] = False
         if   PRINT_ENABLED:
             print(
-                "pwr: gateway {} node {1.node.id} {1.rss:3.2f} dBm node {2.node.id} {2.rss:3.2f} dBm; diff {3:3.2f} dBm".format(receiver_id,
+                "pwr: gateway {0} node {1.node.id} {1.rss:3.2f} dBm node {2.node.id} {2.rss:3.2f} dBm; diff {3:3.2f} dBm".format(receiver_id,
                                                                                                                      me,
                                                                                                                      other,
                                                                                                                      round(me.rss[receiver_id]
