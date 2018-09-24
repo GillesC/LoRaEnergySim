@@ -3,7 +3,7 @@
 ![Simulation](lora_simulator_v2.png "LoRaWAN Simulator")
 
 ## How to cite?
-```
+```latex
 @misc{callebautLoRaSim,
 author =   {Gilles Callebaut},
 title =    {{LoRaWAN Network Energy Simulator}},
