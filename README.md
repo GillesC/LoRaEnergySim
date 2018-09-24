@@ -2,6 +2,15 @@
 
 ![Simulation](lora_simulator_v2.png "LoRaWAN Simulator")
 
+## How to cite?
+```
+@misc{callebautLoRaSim,
+author =   {Gilles Callebaut},
+title =    {{LoRaWAN Network Energy Simulator}},
+doi = {10.5281/zenodo.1217125},
+howpublished = {\url{https://github.com/GillesC/LoRaEnergySim}},
+}
+```
 
 ## How to use?
 The framework consists of three main components, i.e., nodes, an air interface and a gateway.
