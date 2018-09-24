@@ -6,7 +6,7 @@
 ```latex
 @misc{callebautLoRaSim,
 author =   {Gilles Callebaut},
-title =    {{LoRaWAN Network Energy Simulator}},
+title =    {{LoRaWAN Network Simulator}},
 doi = {10.5281/zenodo.1217125},
 howpublished = {\url{https://github.com/GillesC/LoRaEnergySim}},
 }
