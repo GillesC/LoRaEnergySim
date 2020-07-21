@@ -4,11 +4,14 @@
 
 ## How to cite?
 ```latex
-@misc{callebautLoRaSim,
-author =   {Gilles Callebaut},
-title =    {{LoRaWAN Network Simulator}},
-doi = {10.5281/zenodo.1217125},
-howpublished = {\url{https://github.com/GillesC/LoRaEnergySim}},
+@INPROCEEDINGS{8885739,  
+author={G. {Callebaut} and G. {Ottoy} and L. {van der Perre}},  
+booktitle={2019 IEEE Wireless Communications and Networking Conference (WCNC)},   
+title={Cross-Layer Framework and Optimization for Efficient Use of the Energy Budget of IoT Nodes},   
+year={2019},  
+volume={},  
+number={},  
+pages={1-6},
 }
 ```
 
