@@ -30,9 +30,10 @@ def required_snr(dr):
 class Gateway:
     SENSITIVITY = {6: -121, 7: -126.5, 8: -129, 9: -131.5, 10: -134, 11: -136.5, 12: -139.5}
 
-    def __init__(self, env, location, fast_adr_on=False, max_snr_adr=True, min_snr_adr=False, avg_snr_adr=False,
+    def __init__(self, env, gw_id, location, fast_adr_on=False, max_snr_adr=True, min_snr_adr=False, avg_snr_adr=False,
                  adr_margin_db=10):
         self.bytes_received = 0
+        self.id = gw_id
         self.location = location
         self.packet_history = dict()
         self.packet_num_received_from = dict()
@@ -56,13 +57,14 @@ class Gateway:
 
         self.prop_measurements = {}
 
-    def packet_received(self, from_node, packet: UplinkMessage, now):
+    def packet_relayed(self, from_node, packet: UplinkMessage, now):
 
         downlink_meta_msg = DownlinkMetaMessage()
         downlink_msg = DownlinkMessage(dmm=downlink_meta_msg)
 
         """
-        The packet is received at the gateway.
+        The packet is relayed by the gateway with the best SNR value.
+        Other gateways may received the packet, but this is the only gateway relaying a DL message.
         The packet is no longer in the air and has not collided.
         After receiving a packet the gateway sends the packet to the Network server and executes the ADR algorithm.
         For simplification, this algorithm is executed here.
@@ -74,7 +76,8 @@ class Gateway:
             self.packet_num_received_from[from_node.id] = 0
             self.distinct_bytes_received_from[from_node.id] = 0
 
-        if packet.rss < self.SENSITIVITY[packet.lora_param.sf] or packet.snr < required_snr(packet.lora_param.dr):
+        if packet.rss[self.id] < self.SENSITIVITY[packet.lora_param.sf] or \
+                packet.snr[self.id] < required_snr(packet.lora_param.dr):
             # the packet received is to weak
             downlink_meta_msg.weak_packet = True
             self.uplink_packet_weak.append(packet)
@@ -83,7 +86,7 @@ class Gateway:
         self.bytes_received += packet.payload_size
         self.num_of_packet_received += 1
 
-        # everytime a distinct message is received (i.e. id is diff from previous message
+        # everytime a distinct message is received (i.e. id is diff from previous message)
         if from_node.id not in self.last_distinct_packets_received_from:
             self.distinct_packets_received += 1
         elif self.last_distinct_packets_received_from[from_node.id] != packet.id:
@@ -91,7 +94,7 @@ class Gateway:
             self.distinct_bytes_received_from[from_node.id] += packet.payload_size
         self.last_distinct_packets_received_from[from_node.id] = packet.id
 
-        self.packet_history[from_node.id].append(packet.snr)
+        self.packet_history[from_node.id].append(packet.snr[self.id])
 
         if from_node.adr:
             downlink_msg.adr_param = self.adr(packet)
@@ -151,7 +154,7 @@ class Gateway:
 
     def check_duty_cycle(self, payload_size, sf, freq, now) -> (bool, float, float):
         import LoRaPacket
-        time_on_air = LoRaPacket.time_on_air(payload_size, lora_param=LoRaParameters(freq=freq, sf=sf, bw=125, cr=5, crc_enabled=1, de_enabled=0, header_implicit_mode=1))
+        time_on_air = LoRaPacket.time_on_air(payload_size, lora_param=LoRaParameters(freq, 125, 5, 1, 0, 1, sf))
         # it is not possible to schedule a message now on this channel for this message
         if self.time_off[freq] > self.env.now:
             return False, time_on_air, -1
@@ -249,7 +252,7 @@ class Gateway:
 
         return self.num_of_packet_received / packets_sent
 
-    def get_simulation_data(self, name) -> pd.Series:
+    def get_simulation_data(self) -> pd.Series:
         series = pd.Series({
             'BytesReceived': self.bytes_received,
             'DLPacketsLost': self.dl_not_schedulable,
@@ -257,5 +260,15 @@ class Gateway:
             'PacketsReceived': self.num_of_packet_received,
             'UniquePacketsReceived': self.distinct_packets_received
         })
-        series.name = name
-        return series.transpose()
+        return series
+
+    @staticmethod
+    def get_simulation_data_frame(gateways: list, name) -> pd.DataFrame:
+        column_names = ['BytesReceived', 'DLPacketsLost', 'ULWeakPackets', 'PacketsReceived', 'UniquePacketsReceived']
+        pdf = pd.DataFrame(columns=column_names)
+        list_of_series = []
+        for gw in gateways:
+            list_of_series.append(gw.get_simulation_data())
+        data = pdf.append(list_of_series)
+        data.name = name
+        return pd.DataFrame(data).transpose()

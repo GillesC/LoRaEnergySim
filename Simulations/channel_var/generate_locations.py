@@ -1,18 +1,23 @@
 import os
 import pickle
 
-from GlobalConfig import locations_file
+from GlobalConfig import *
 from Location import Location
+from RectangularArea import RectangularArea
 
-num_locations = 500
-cell_size = 1000
-num_of_simulations = 1000
+# Simulation specific parameters extracted from GlobalConfig.py
+
+if indoor_nodes is True:
+    indoor_area = RectangularArea(origin=Location(x=0, y=0), len_x=200, len_y=300)
 
 locations_per_simulation = list()
 for num_sim in range(num_of_simulations):
     locations = list()
     for i in range(num_locations):
-        locations.append(Location(min=0, max=cell_size, indoor=False))
+        loc = Location(min=0, max=max_x, minY=0, maxY=max_y, indoor=False)
+        if indoor_nodes and indoor_area.is_inside(loc):
+            loc.indoor = True
+        locations.append(loc)
     locations_per_simulation.append(locations)
 
 
