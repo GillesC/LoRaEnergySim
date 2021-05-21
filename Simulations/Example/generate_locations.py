@@ -4,9 +4,9 @@ import pickle
 from GlobalConfig import locations_file
 from Location import Location
 
-num_locations = 500
-cell_size = 1000
-num_of_simulations = 1000
+num_locations = 3
+cell_size = 100
+num_of_simulations = 100
 
 locations_per_simulation = list()
 

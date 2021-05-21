@@ -38,19 +38,19 @@ class AirInterface:
         p2_bw = p2.lora_param.bw
 
         if abs(p1_freq - p2_freq) <= 120 and (p1_bw == 500 or p2_bw == 500):
-            if   PRINT_ENABLED:
+            if PRINT_ENABLED:
                 print("frequency coll 500")
             return True
         elif abs(p1_freq - p2_freq) <= 60 and (p1_bw == 250 or p2_bw == 250):
-            if   PRINT_ENABLED:
+            if PRINT_ENABLED:
                 print("frequency coll 250")
             return True
         elif abs(p1_freq - p2_freq) <= 30 and (p1_bw == 125 or p2_bw == 125):
-            if   PRINT_ENABLED:
+            if PRINT_ENABLED:
                 print("frequency coll 125")
             return True
 
-        if   PRINT_ENABLED:
+        if PRINT_ENABLED:
             print("no frequency coll")
         return False
 
@@ -62,10 +62,10 @@ class AirInterface:
         #       sf1 == sf2
         #
         if p1.lora_param.sf == p2.lora_param.sf:
-            if   PRINT_ENABLED:
+            if PRINT_ENABLED:
                 print("collision sf node {} and node {}".format(p1.node.id, p2.node.id))
             return True
-        if   PRINT_ENABLED:
+        if PRINT_ENABLED:
             print("no sf collision")
         return False
 
@@ -78,7 +78,7 @@ class AirInterface:
         critical_section_start = me.start_on_air + sym_duration * (num_preamble - 5)
         critical_section_end = me.start_on_air + me.my_time_on_air()
 
-        if   PRINT_ENABLED:
+        if PRINT_ENABLED:
             print('P1 has a critical section in [{} - {}]'.format(critical_section_start, critical_section_end))
 
         other_end = other.start_on_air + other.my_time_on_air()
@@ -95,7 +95,7 @@ class AirInterface:
         critical_section_start = other.start_on_air + sym_duration * (num_preamble - 5)
         critical_section_end = other.start_on_air + other.my_time_on_air()
 
-        if   PRINT_ENABLED:
+        if PRINT_ENABLED:
             print('P2 has a critical section in [{} - {}]'.format(critical_section_start, critical_section_end))
 
         me_end = me.start_on_air + me.my_time_on_air()
@@ -120,7 +120,7 @@ class AirInterface:
     @staticmethod
     def power_collision(me: UplinkMessage, other: UplinkMessage, time_collided_nodes):
         power_threshold = 6  # dB
-        if   PRINT_ENABLED:
+        if PRINT_ENABLED:
             print(
                 "pwr: node {0.node.id} {0.rss:3.2f} dBm node {1.node.id} {1.rss:3.2f} dBm; diff {2:3.2f} dBm".format(me,
                                                                                                                      other,
@@ -128,7 +128,7 @@ class AirInterface:
                                                                                                                          me.rss - other.rss,
                                                                                                                          2)))
         if abs(me.rss - other.rss) < power_threshold:
-            if   PRINT_ENABLED:
+            if PRINT_ENABLED:
                 print("collision pwr both node {} and node {} (too close to each other)".format(me.node.id,
                                                                                                 other.node.id))
             if me in time_collided_nodes:
@@ -141,18 +141,18 @@ class AirInterface:
             # me will collided if also time_collided
 
             if me in time_collided_nodes:
-                if   PRINT_ENABLED:
+                if PRINT_ENABLED:
                     print("collision pwr both node {} has collided by node {}".format(me.node.id, other.node.id))
                 me.collided = True
         else:
             # other was overpowered by me
             if other in time_collided_nodes:
-                if   PRINT_ENABLED:
+                if PRINT_ENABLED:
                     print("collision pwr both node {} has collided by node {}".format(other.node.id, me.node.id))
                 other.collided = True
 
     def collision(self, packet) -> bool:
-        if   PRINT_ENABLED:
+        if PRINT_ENABLED:
             print("CHECK node {} (sf:{} bw:{} freq:{:.6e}) #others: {}".format(
                 packet.node.id, packet.lora_param.sf, packet.lora_param.bw, packet.lora_param.freq,
                 len(self.packages_in_air)))
@@ -160,7 +160,7 @@ class AirInterface:
             return True
         for other in self.packages_in_air:
             if other.node.id != packet.node.id:
-                if   PRINT_ENABLED:
+                if PRINT_ENABLED:
                     print(">> node {} (sf:{} bw:{} freq:{:.6e})".format(
                         other.node.id, other.lora_param.sf, other.lora_param.bw,
                         other.lora_param.freq))

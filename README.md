@@ -52,42 +52,80 @@ which is a parameter defined in the `GlobalConfig.py` file.
 #### Simulation.py
 In the simulation file, you will use the building blocks in the framework to simulate a specific environment and 
 acquire results such as the consumed energy, and the number of collided messages. See section `Framework` (below) for configurable parameters and output.
+Please see the comments in the `Example>simulation.py` on how to write a simulation file. 
+In `simulation.py` you load the locations, specify the object to hold the results and specify what you want to simulate.
+In `SimulationProcess`, the simulation itself is run. The gateway is created, the nodes are generated with their lora parameters and energy profile.
+Afterwhich the simulation is run. After completion of one simulation the results are extracted from the objects and returned, to be used in the `simulation.py` file.
 
-
+The project can now be run by first running `generate_locations.py` and then `simulation.py`.
 
 ## Framework
 
+Please read first the paper to have a more detailed understanding of the framework with respect to LoRaWAN operation and limitations.
+
 ### Propagation Model
 The propagation model determines how the messages are impacted by the environment. 
-It predicts the path loss, i.e., how much the signal is attenuated, for a given environment. 
-The `PropagationModel.py` contains (currently) two implementations.
+It predicts the path loss, i.e., how much the signal is attenuated between the transmitter and receiver, for a given environment. 
+The `PropagationModel.py` contains (currently) two implementations:
 
-#### log shadow model or log-distance path loss model
-It is described as:
-![formula](https://render.githubusercontent.com/render/math?math=PL=P_{Tx_{dBm}}-P_{Rx_{dBm}}=PL_{0}%2B10\gamma%20\log%20_{10}{\frac%20{d}{d_{0}}}%2BX_{g})
-<img alt="formula" src="https://render.githubusercontent.com/render/math?math=PL=P_{Tx_{dBm}}-P_{Rx_{dBm}}=PL_{0}%2B10\gamma%20\log%20_{10}{\frac%20{d}{d_{0}}}%2BX_{g}" />
+- log shadow model or log-distance path loss model, where the default parameters are based on the Rep. ITU-R P.2346-0 and J. Petajajarvi, K. Mikhaylov, A. Roivainen, T. Hanninen and M. Pettissalo, "On the coverage of LPWANs: range evaluation and channel attenuation model for LoRa technology," 2015 14th International Conference on ITS Telecommunications (ITST), 2015, pp. 55-59, doi: 10.1109/ITST.2015.7377400.
+- COST231, including more details about the environment, e.g., building heights
+
+### SNR Model
+This model transforms the received signal strength (RSS) to a signal-to-noise ratio (SNR) by the method `rss_to_snr`.
+At this moment the noise is only affected by the [thermal noise](https://en.wikipedia.org/wiki/Johnson%E2%80%93Nyquist_noise).
+This results in (dB):
+```python
+SNR = RSS - (-174 + 10 * log10(125e3))
+```
 
 
-### Air interface
 
-
-### Energy Profile
-
-### Gateway
-
-### Global
-
-### Location
+### LoRa Parameters
+All parameters specific to the lora protocol (lorawan) and measured energy consumption related to these parameters are here included.
 
 ### LoRaPacket
+LoRaPackets are send over the air interface from the nodes to the gateway.
+`LoRaPacket` contains a uplink and downlink message class, including relevant metadata and information concerning the state of the message, e.g., received, collided,...
+
+### Energy Profile
+The energy profile class contains the sleep, processing, transmitting and received power of a node.
+This can be different for each node and can be defined in the `simulation.py` file.
+
+### Node
+The Node class contains all information regarding the power consumption, number of messages send, payload send, retransmissions, ...
+Nodes act as real IoT nodes, joining the network, waiting, sleeping, transmittion and receiving. Their behaviour is determined in the main `simulation.py` file.
 
 
+After running the simulation, you can extract the following iniformation:
+- `energy_per_bit`. This is the amount of energy consumed to send one bit of data
+- `transmit_related_energy_per_bit`. This only contains the energy spend in transmit mode.
+- `transmit_related_energy_per_unique_bit`. This only contains the energy spend in transmit mode and tx'ed retransmissions are not count against the transmitted bits
+-  `total_energy_consumed`
+- `get_simulation_data`:
+```python
+series = {
+            'WaitTimeDC': self.total_wait_time_because_dc / 1000,  # [s] instead of [ms]
+            'NoDLReceived': self.num_no_downlink,
+            'UniquePackets': self.num_unique_packets_sent,
+            'TotalPackets': self.packets_sent,
+            'CollidedPackets': self.num_collided,
+            'RetransmittedPackets': self.num_retransmission,
+            'TotalBytes': self.bytes_sent,
+            'TotalEnergy': self.total_energy_consumed(),
+            'TxRxEnergy': self.transmit_related_energy_consumed(),
+            'EnergyValuePackets': self.energy_value
+        }
+```
 
+### Air interface
+The air interface detects collisions and alters the LoRaPacket object so the node and gateway know what happened during the transmission of the message.
+It employs the used propagation model and snr model to determine if the transfer was successful or not.
 
+### Gateway
+At the gateway, the received SNR is checked and messages below the required threshold are marked as weak and is not rx'ed.
+The gateway also handles DL messages if requested by the node.
 
-
-
-### The node
 
 #### Configurable Properties
 - energy_profile: EnergyProfile, 

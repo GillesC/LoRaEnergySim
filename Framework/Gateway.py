@@ -165,7 +165,7 @@ class Gateway:
     def adr(self, packet: UplinkMessage):
         history = self.packet_history[packet.node.id]
 
-        if len(history) is 20 or self.fast_adr_on:
+        if len(history) == 20 or self.fast_adr_on:
             # Execute adr else do nothing
 
             if self.max_snr_adr:

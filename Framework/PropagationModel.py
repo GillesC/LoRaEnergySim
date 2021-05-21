@@ -1,6 +1,5 @@
 import numpy as np
 
-
 class LogShadow:
 
     # http://ieeexplore.ieee.org.kuleuven.ezproxy.kuleuven.be/stamp/stamp.jsp?tp=&arnumber=7377400
