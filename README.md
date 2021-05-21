@@ -64,7 +64,8 @@ The `PropagationModel.py` contains (currently) two implementations.
 
 #### log shadow model or log-distance path loss model
 It is described as:
-<img src="https://latex.codecogs.com/svg.latex?\Large&space;PL=P_{Tx_{dBm}}-P_{Rx_{dBm}}=PL_{0}+10\gamma \log _{10}{\frac {d}{d_{0}}}+X_{g}" title="\Large PL=P_{Tx_{dBm}}-P_{Rx_{dBm}}=PL_{0}+10\gamma \log _{10}{\frac {d}{d_{0}}}+X_{g}" />
+![formula](https://render.githubusercontent.com/render/math?math=PL=P_{Tx_{dBm}}-P_{Rx_{dBm}}=PL_{0}%2B10\gamma%20\log%20_{10}{\frac%20{d}{d_{0}}}%2BX_{g})
+
 
 ### Air interface
 
