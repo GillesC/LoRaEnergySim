@@ -5,16 +5,17 @@ import os
 import pickle
 
 import pandas as pd
-from Location import Location
+
 import SimulationProcess
-from GlobalConfig import *
+from Simulations.GlobalConfig import *
+from Framework import Location as loc
 
 # The console attempts to auto-detect the width of the display area, but when that fails it defaults to 80
 # characters. This behavior can be overridden with:
 desired_width = 320
 pd.set_option('display.width', desired_width)
 
-gateway_location = Location(x=middle, y=middle, indoor=False)
+gateway_location = loc.Location(x=middle, y=middle, indoor=False)
 
 
 def process_results(results, p_size, sigma, r):
@@ -104,6 +105,9 @@ if __name__ == '__main__':
         # r_list = results of running the SimulationProcess.run_helper method for each arg in args
         # the SimulationProcess will start the simulation with the given arguments
         # and return the results you want (see above)
+        
+        # uncomment if you want to run it sequently (to see output in Spyder for instance)
+        #r_list = [SimulationProcess.run_helper(a) for a in args] 
         r_list = pool.map(func=SimulationProcess.run_helper, iterable=args)
 
         # process the returned results from SimulationProcess.run_helper

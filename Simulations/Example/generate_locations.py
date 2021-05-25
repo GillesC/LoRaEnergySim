@@ -1,8 +1,8 @@
 import os
 import pickle
 
-from GlobalConfig import locations_file
-from Location import Location
+from Simulations.GlobalConfig import locations_file
+from Framework.Location import Location
 
 num_locations = 3
 cell_size = 100

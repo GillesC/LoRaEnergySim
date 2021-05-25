@@ -18,7 +18,7 @@ path_loss_variances = [7.9]  # [0, 5, 7.8, 15, 20]
 MAC_IMPROVEMENT = False
 num_locations = 50
 num_of_simulations = 1000
-locations_file = "Locations/"+"{}_locations_{}_sim.pkl".format(num_locations, num_of_simulations)
+locations_file = "locations/"+"{}_locations_{}_sim.pkl".format(num_locations, num_of_simulations)
 results_file = "results/{}_{}_{}_cnst_num_bytes.p".format(adr, confirmed_messages, transmission_rate_id)
 
 ############### SIMULATION SPECIFIC PARAMETERS ###############
@@ -26,7 +26,7 @@ results_file = "results/{}_{}_{}_cnst_num_bytes.p".format(adr, confirmed_message
 ############### DEFAULT PARAMETERS ###############
 LOG_ENABLED = True
 MAX_DELAY_BEFORE_SLEEP_MS = 500
-PRINT_ENABLED = False
+PRINT_ENABLED = True
 MAX_DELAY_START_PER_NODE_MS = np.round(simulation_time / 10)
 track_changes = True
 middle = np.round(cell_size / 2)

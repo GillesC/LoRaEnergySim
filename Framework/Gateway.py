@@ -2,8 +2,8 @@ from collections import deque  # circular buffer for storing SNR history for the
 
 import pandas as pd
 
-from LoRaPacket import UplinkMessage, DownlinkMetaMessage, DownlinkMessage
-from LoRaParameters import LoRaParameters
+from Framework.LoRaPacket import UplinkMessage, DownlinkMetaMessage, DownlinkMessage
+from Framework.LoRaParameters import LoRaParameters
 from Simulations.GlobalConfig import *
 
 
@@ -150,7 +150,7 @@ class Gateway:
         return downlink_msg
 
     def check_duty_cycle(self, payload_size, sf, freq, now) -> (bool, float, float):
-        import LoRaPacket
+        from Framework import LoRaPacket
         time_on_air = LoRaPacket.time_on_air(payload_size, lora_param=LoRaParameters(freq=freq, sf=sf, bw=125, cr=5, crc_enabled=1, de_enabled=0, header_implicit_mode=1))
         # it is not possible to schedule a message now on this channel for this message
         if self.time_off[freq] > self.env.now:

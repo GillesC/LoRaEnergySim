@@ -1,13 +1,13 @@
 import simpy
 
-import PropagationModel
-from AirInterface import AirInterface
-from EnergyProfile import EnergyProfile
-from Gateway import Gateway
-from LoRaParameters import LoRaParameters
-from Node import Node
-from SNRModel import SNRModel
-from GlobalConfig import *
+from Framework import PropagationModel
+from Framework.AirInterface import AirInterface
+from Framework.EnergyProfile import EnergyProfile
+from Framework.Gateway import Gateway
+from Framework.LoRaParameters import LoRaParameters
+from Framework.Node import Node
+from Framework.SNRModel import SNRModel
+from Simulations.GlobalConfig import *
 
 tx_power_mW = {2: 91.8, 5: 95.9, 8: 101.6, 11: 120.8, 14: 146.5}
 rx_measurements = {'pre_mW': 8.2, 'pre_ms': 3.4, 'rx_lna_on_mW': 39,

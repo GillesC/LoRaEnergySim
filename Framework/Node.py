@@ -4,13 +4,13 @@ from enum import Enum, auto
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from EnergyProfile import EnergyProfile
-from Gateway import Gateway
-from LoRaPacket import DownlinkMessage
-from LoRaPacket import DownlinkMetaMessage
-from LoRaPacket import UplinkMessage
-from LoRaParameters import LoRaParameters
-from Location import Location
+from Framework.EnergyProfile import EnergyProfile
+from Framework.Gateway import Gateway
+from Framework.LoRaPacket import DownlinkMessage
+from Framework.LoRaPacket import DownlinkMetaMessage
+from Framework.LoRaPacket import UplinkMessage
+from Framework.LoRaParameters import LoRaParameters
+from Framework.Location import Location
 from Simulations.GlobalConfig import *
 
 
@@ -381,7 +381,7 @@ class Node:
 
             power = (rx_energy / rx_time) * 1000
         else:
-            import LoRaPacket
+            from Framework import LoRaPacket
             if rec_window == 1:
                 rx_time = LoRaPacket.time_on_air(12, packet.lora_param)
                 rx_energy = (rx_time / 1000) * self.energy_profile.rx_power['rx_lna_on_mW']
