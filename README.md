@@ -152,6 +152,8 @@ The gateway also handles DL messages if requested by the node.
 
 ## Common Erros
 
-Q: Can't find Globaconfig, Locations, ....
-
+Q: Can't find Globaconfig, Locations, ....<br>
 A: Ensure that the folders Framework and Simulations are marked as Source Root. For Pycharm right click on the folder > Mark directory as > Source Root
+
+Q: no output in IPython/Spyder<br>
+A: The code is run in parralel by default and the std output is not handled well in that case. You can run the code sequently, see the comments in Example/simulation.py regarding the pool.map function at the bottom.
