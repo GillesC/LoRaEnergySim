@@ -490,8 +490,8 @@ class Node:
                 power_consumed_in_state_mW = self.energy_profile.sleep_power_mW
                 # we can not yet determine energy consumed
             elif new_state == NodeState.PROCESS:
-                energy_consumed_in_state_mJ = (self.process_time / 1000) * self.energy_profile.sleep_power_mW
-                power_consumed_in_state_mW = self.energy_profile.sleep_power_mW
+                energy_consumed_in_state_mJ = (self.process_time / 1000) * self.energy_profile.proc_power_mW
+                power_consumed_in_state_mW = self.energy_profile.proc_power_mW
             elif new_state != NodeState.OFFLINE:
                 ValueError('State is not recognized')
 
