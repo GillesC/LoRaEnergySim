@@ -113,7 +113,7 @@ class AirInterface:
         elif me_time_collided:
             return (me,)
         elif other_time_collided:
-            return (other_time_collided,)
+            return (other,)
         else:
             return None
 

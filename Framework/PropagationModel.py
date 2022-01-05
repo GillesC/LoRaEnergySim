@@ -19,7 +19,7 @@ class LogShadow:
         Lpl = 10 * self.gamma * np.log10(d / self.d0) + np.random.normal(self.Lpld0, self.std) + bpl
         if Lpl <0:
             Lpl = 0
-        return tp_dBm - self.GL - Lpl
+        return tp_dBm + self.GL - Lpl
 
 
 class COST231:
