@@ -34,7 +34,7 @@ The source of the framework is located in the `Framework` folder.
 The `Simulations` folder contains some examples.
 
 ### General Workflow
-In order to compare different settings/configurations, it is imperative that the locations of the nodes are the same for all simulations.
+In order to compare different `settings/configurations`, it is imperative that the locations of the nodes are the same for all simulations.
 Therefore, a file `generate_locations.py` is included in the examples.
 
 #### Generate Node locations
