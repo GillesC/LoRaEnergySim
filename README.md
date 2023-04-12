@@ -37,6 +37,12 @@ The `Simulations` folder contains some examples.
 In order to compare different `settings/configurations`, it is imperative that the locations of the nodes are the same for all simulations.
 Therefore, a file `generate_locations.py` is included in the examples.
 
+Workflow:
+- Define your the settings for a simulation environment, e.g., start spreading factor, simulation duration (real-time), in the [GlobalConfig](https://github.com/GillesC/LoRaEnergySim/blob/master/Simulations/GlobalConfig.py) file
+- Generate your locations see [here](#generate-node-locations). It will use the settings defined in the GlobalConfig file.
+- Create a `Simulation.py` file as detailed [here](#simulation).
+
+
 #### Generate Node locations
 
 Configurable parameters:
@@ -49,7 +55,7 @@ For each simulation, a random set of locations inside the area is generated and 
 which is a parameter defined in the `GlobalConfig.py` file. 
 
 
-#### Simulation.py
+#### Simulation
 In the simulation file, you will use the building blocks in the framework to simulate a specific environment and 
 acquire results such as the consumed energy, and the number of collided messages. See section `Framework` (below) for configurable parameters and output.
 Please see the comments in the `Example>simulation.py` on how to write a simulation file. 
