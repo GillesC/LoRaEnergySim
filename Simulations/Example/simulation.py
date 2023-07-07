@@ -107,7 +107,7 @@ if __name__ == '__main__':
         # and return the results you want (see above)
         
         # uncomment if you want to run it sequently (to see output in Spyder for instance)
-        #r_list = [SimulationProcess.run_helper(a) for a in args] 
+        # r_list = [SimulationProcess.run_helper(a) for a in args]
         r_list = pool.map(func=SimulationProcess.run_helper, iterable=args)
 
         # process the returned results from SimulationProcess.run_helper

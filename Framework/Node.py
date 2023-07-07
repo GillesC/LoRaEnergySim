@@ -548,18 +548,18 @@ class Node:
 
     @staticmethod
     def get_simulation_data_frame(nodes: list) -> pd.DataFrame:
-        column_names = ['WaitTimeDC', 'NoDLReceived', 'UniquePackets', 'TotalPackets', 'CollidedPackets',
-                        'RetransmittedPackets', 'TotalBytes', 'TotalEnergy', 'TxRxEnergy', 'EnergyValuePackets']
-        pdf = pd.DataFrame(columns=column_names)
-        list_of_series = []
+        # column_names = ['WaitTimeDC', 'NoDLReceived', 'UniquePackets', 'TotalPackets', 'CollidedPackets',
+        #                 'RetransmittedPackets', 'TotalBytes', 'TotalEnergy', 'TxRxEnergy', 'EnergyValuePackets']
+        df = pd.DataFrame()
+        dfs = []
         for node in nodes:
-            list_of_series.append(node.get_simulation_data())
-        return pdf.append(list_of_series)
-
+            dfs.append(node.get_simulation_data().to_frame().T)
+        return pd.concat(dfs, ignore_index=True)
     @staticmethod
     def get_mean_simulation_data_frame(nodes: list, name) -> pd.DataFrame:
-        data = Node.get_simulation_data_frame(nodes).sum(axis=0)
-        data.name = name
+        data = Node.get_simulation_data_frame(nodes)
+        data = data.sum(axis=0)
+        data['name'] = name
         return pd.DataFrame(data).transpose()
 
     @staticmethod

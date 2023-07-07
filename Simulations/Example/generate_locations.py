@@ -6,7 +6,7 @@ from Framework.Location import Location
 
 num_locations = 3
 cell_size = 100
-num_of_simulations = 100
+num_of_simulations = 1
 
 locations_per_simulation = list()
 
