@@ -2,7 +2,7 @@ import numpy as np
 
 class LogShadow:
 
-    # http://ieeexplore.ieee.org.kuleuven.ezproxy.kuleuven.be/stamp/stamp.jsp?tp=&arnumber=7377400
+    # 10.1109/ITST.2015.7377400
     def __init__(self, gamma=2.32, d0=1000.0, std=7.8, Lpld0=128.95, GL=0):
         self.gamma = gamma
         self.d0 = d0
