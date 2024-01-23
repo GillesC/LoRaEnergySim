@@ -163,3 +163,28 @@ A: Ensure that the folders Framework and Simulations are marked as Source Root. 
 
 Q: no output in IPython/Spyder<br>
 A: The code is run in parralel by default and the std output is not handled well in that case. You can run the code sequently, see the comments in Example/simulation.py regarding the pool.map function at the bottom.
+
+## Academic work using our simulator
+
+Cited [in](https://scholar.google.com/scholar?cites=2795983333038395209&as_sdt=2005&sciodt=0,5&hl=en).
+
+Simulator used in:
+
+- Park, G., Lee, W., & Joe, I. (2020). Network resource optimization with reinforcement learning for low power wide area networks. EURASIP Journal on Wireless Communications and Networking, 2020(1), 1-20.
+- L. Beltramelli, A. Mahmood, P. Österberg, M. Gidlund, P. Ferrari and E. Sisinni, "Energy Efficiency of Slotted LoRaWAN Communication With Out-of-Band Synchronization," in IEEE Transactions on Instrumentation and Measurement, vol. 70, pp. 1-11, 2021, Art no. 5501211, doi: 10.1109/TIM.2021.3051238.
+- Thoen B, Callebaut G, Leenders G, Wielandt S. A Deployable LPWAN Platform for Low-Cost and Energy-Constrained IoT Applications. Sensors. 2019; 19(3):585. https://doi.org/10.3390/s19030585
+- T. Fedullo, A. Morato, F. Tramarin, P. Bellagente, P. Ferrari and E. Sisinni, "Adaptive LoRaWAN Transmission exploiting Reinforcement Learning: the Industrial Case," 2021 IEEE International Workshop on Metrology for Industry 4.0 & IoT (MetroInd4.0&IoT), Rome, Italy, 2021, pp. 671-676, doi: 10.1109/MetroInd4.0IoT51437.2021.9488498.
+- Leenders G, Callebaut G, Ottoy G, Van der Perre L, De Strycker L. An Energy-Efficient LoRa Multi-Hop Protocol through Preamble Sampling for Remote Sensing. Sensors. 2023; 23(11):4994. https://doi.org/10.3390/s23114994
+- Acosta-Garcia, L., Aznar-Poveda, J., Garcia-Sanchez, A. J., Garcia-Haro, J., & Fahringer, T. (2023). Dynamic transmission policy for enhancing LoRa network performance: A deep reinforcement learning approach. Internet of Things, 24, 100974.
+- G. Leenders, G. Ottoy, G. Callebaut, L. Van der Perre and L. De Strycker, "An Energy-Efficient LoRa Multi-Hop Protocol through Preamble Sampling," 2023 IEEE Wireless Communications and Networking Conference (WCNC), Glasgow, United Kingdom, 2023, pp. 1-6, doi: 10.1109/WCNC55385.2023.10118770.
+- E. Sisinni et al., "A new LoRaWAN adaptive strategy for smart metering applications," 2020 IEEE International Workshop on Metrology for Industry 4.0 & IoT, Roma, Italy, 2020, pp. 690-695, doi: 10.1109/MetroInd4.0IoT48571.2020.9138226.
+- T. Fedullo, A. Mahmood, F. Tramarin, A. Morato, M. Gidlund and L. Rovati, "Exploiting Hybrid Medium Access Control and Relaying Strategies to Overcome Duty-Cycle Limitations in LoRa-Based Sensor Networks," 2023 IEEE International Instrumentation and Measurement Technology Conference (I2MTC), Kuala Lumpur, Malaysia, 2023, pp. 01-06, doi: 10.1109/I2MTC53148.2023.10176039.
+- F. De Rango, A. Lipari, D. Stumpo and A. Iera, "Dynamic Switching in LoRaWAN under multiple Gateways and Heavy Traffic Load," 2021 IEEE Global Communications Conference (GLOBECOM), Madrid, Spain, 2021, pp. 1-6, doi: 10.1109/GLOBECOM46510.2021.9685009.
+- D. Stumpo, F. De Rango, F. Buffone and M. Tropea, "Performance of Extended LoRaEnergySim Simulator in supporting Multi-Gateway scenarios and Interference Management," 2022 IEEE/ACM 26th International Symposium on Distributed Simulation and Real Time Applications (DS-RT), Alès, France, 2022, pp. 135-142, doi: 10.1109/DS-RT55542.2022.9932063.
+- G. Callebaut, G. Ottoy and L. V. d. Perre, "Optimizing Transmission of IoT Nodes in Dynamic Environments," 2020 International Conference on Omni-layer Intelligent Systems (COINS), Barcelona, Spain, 2020, pp. 1-5, doi: 10.1109/COINS49042.2020.9191674.
+- Križanović, V.; Grgić, K.; Spišić, J.; Žagar, D. An Advanced Energy-Efficient Environmental Monitoring in Precision Agriculture Using LoRa-Based Wireless Sensor Networks. Sensors 2023, 23, 6332.
+- Zhang, Jiayue. "Design Guidelines of A Low Power Communication Protocol for Zero Energy Devices." (2023).
+- Stumpo, Daniele, Floriano De Rango, and Francesco Buffone. "Extending LoRaEnergySim Simulator to Support Interference Management under Multi-Gateway IoT Scenarios." (2022).
+- T. Fedullo, A. Morato, F. Tramarin, P. Ferrari and E. Sisinni, "Smart Measurement Systems Exploiting Adaptive LoRaWAN Under Power Consumption Constraints: a RL Approach," 2022 IEEE International Workshop on Metrology for Industry 4.0 & IoT (MetroInd4.0&IoT), Trento, Italy, 2022, pp. 354-359, doi: 10.1109/MetroInd4.0IoT54413.2022.9831487.
+
+
