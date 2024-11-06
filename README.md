@@ -169,7 +169,7 @@ A: The code is run in parralel by default and the std output is not handled well
 Cited [in](https://scholar.google.com/scholar?cites=2795983333038395209&as_sdt=2005&sciodt=0,5&hl=en).
 
 Simulator used in:
-
+- G. L. Scapin, G. Alvarez, N. Quiroga, F. Collado and J. A. Fraire, "Performance Assessment of LoRaWAN DtS-IoT Networks: Operation Modes and Server Placement," 2024 IEEE Biennial Congress of Argentina (ARGENCON), San Nicolás de los Arroyos, Argentina, 2024, pp. 1-8, doi: 10.1109/ARGENCON62399.2024.10735884.
 - Park, G., Lee, W., & Joe, I. (2020). Network resource optimization with reinforcement learning for low power wide area networks. EURASIP Journal on Wireless Communications and Networking, 2020(1), 1-20.
 - L. Beltramelli, A. Mahmood, P. Österberg, M. Gidlund, P. Ferrari and E. Sisinni, "Energy Efficiency of Slotted LoRaWAN Communication With Out-of-Band Synchronization," in IEEE Transactions on Instrumentation and Measurement, vol. 70, pp. 1-11, 2021, Art no. 5501211, doi: 10.1109/TIM.2021.3051238.
 - Thoen B, Callebaut G, Leenders G, Wielandt S. A Deployable LPWAN Platform for Low-Cost and Energy-Constrained IoT Applications. Sensors. 2019; 19(3):585. https://doi.org/10.3390/s19030585
